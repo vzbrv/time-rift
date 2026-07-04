@@ -613,19 +613,19 @@
     }
 
     previewMarkup() {
-      const rounds = this.theme.teaser
+      const eras = this.theme.teaser
         .map(
           (item, index) => `
-            <div class="preview-round">
+            <div class="preview-era">
               <b>${esc(item)}</b>
-              <span>Round ${index + 1} of ${this.theme.teaser.length}</span>
+              <span>Era ${index + 1} of ${this.theme.teaser.length}</span>
             </div>
           `
         )
         .join("");
       return `
         <div class="rift-label">Timeline break map: ${esc(this.theme.title)}</div>
-        <div class="preview-count">${this.theme.events.length} events across ${this.theme.teaser.length} rounds · ${esc(this.difficultySummary())}</div>
+        <div class="preview-count">${this.theme.events.length} events across ${this.theme.teaser.length} eras · ${this.totalRounds()} playable rounds · ${esc(this.difficultySummary())}</div>
         <div class="teaser-path">${this.theme.teaser.map((item) => `<span>${esc(item)}</span>`).join("<i></i>")}</div>
         <div class="schematic-rift" aria-hidden="true">
           <span class="axis"></span>
@@ -635,8 +635,8 @@
           <i class="node n3"></i>
           <i class="node n4"></i>
         </div>
-        <div class="preview-rounds">
-          ${rounds}
+        <div class="preview-eras">
+          ${eras}
         </div>
       `;
     }
@@ -651,7 +651,7 @@
         <div class="progress-block">
           <div class="progress-copy"><strong>Timeline integrity: ${stability}%</strong><span>Round ${this.state.roundIndex + 1}/${totalRounds}</span></div>
           <div class="stability"><i style="width:${stability}%"></i></div>
-          <div class="blocks" aria-label="Timeline restored progress">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < this.state.restoredRounds ? "on" : ""}"></b>`).join("")}</div>
+          <div class="blocks" style="--round-count:${totalRounds}" aria-label="Round progress">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < this.state.restoredRounds ? "on" : ""}"></b>`).join("")}</div>
         </div>
         ${
           this.state.phase === "revealing"
@@ -884,7 +884,7 @@
           <h3>Timeline restored.</h3>
           <p>You repaired today’s wiki-sourced timeline: ${esc(this.theme.title)}.</p>
           <div class="result-grid">
-            <span><b>${this.state.restoredRounds}/${totalRounds}</b>Timeline restored</span>
+            <span><b>${this.state.restoredRounds}/${totalRounds}</b>Rounds restored</span>
             <span><b>${this.state.rifts}</b>Breaks repaired</span>
             <span><b>${this.state.hintsUsed}</b>Hints used</span>
           </div>
@@ -1232,7 +1232,7 @@
       while (markers.length < totalRounds) markers.push("◌");
       return [
         `IQ Time Rift — ${this.theme.title}`,
-        `${this.qualityLabel()}: ${this.state.restoredRounds}/${totalRounds}`,
+        `${this.qualityLabel()}: ${this.state.restoredRounds}/${totalRounds} rounds`,
         `Breaks repaired: ${this.state.rifts} · Hints: ${this.state.hintsUsed}`,
         markers.join(""),
         "https://iq.wiki",
@@ -1375,9 +1375,9 @@
         .schematic-rift .node{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--iq-navy-dark);border:2px solid var(--iq-pink-light);transform:translate(-50%,-50%);box-shadow:0 0 14px rgba(255,26,136,.62)}
         .schematic-rift .n1{left:18%}.schematic-rift .n2{left:38%}.schematic-rift .n3{left:68%}.schematic-rift .n4{left:86%}
         .schematic-rift .fracture{position:absolute;left:52%;top:9px;bottom:9px;width:24px;transform:translateX(-50%);background:linear-gradient(180deg,var(--iq-pink-light),var(--iq-pink));clip-path:polygon(42% 0,82% 23%,58% 23%,95% 52%,55% 48%,70% 100%,20% 62%,42% 62%,8% 28%,38% 30%);filter:drop-shadow(0 0 16px rgba(255,26,136,.9))}
-        .preview-rounds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-        .preview-round{padding:16px;border-radius:8px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14)}
-        .preview-round b,.preview-round span{display:block}.preview-round span{color:rgba(243,244,246,.62);margin-top:8px}
+        .preview-eras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+        .preview-era{padding:16px;border-radius:8px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14)}
+        .preview-era b,.preview-era span{display:block}.preview-era span{color:rgba(243,244,246,.62);margin-top:8px}
         .stat-row{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}.stat-row span{padding:12px 14px;border-radius:8px;background:rgba(15,23,42,.70);border:1px solid rgba(255,255,255,.12);font-weight:850;text-align:center}
         .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.72);backdrop-filter:blur(8px);z-index:30}
         .modal{position:fixed;top:3vh;left:max(18px,calc((100vw - 1060px)/2));right:max(18px,calc((100vw - 1060px)/2));max-height:94vh;z-index:40;overflow:auto;border-radius:24px;background:var(--iq-navy);border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.55);animation:rise .24s ease-out}
@@ -1386,7 +1386,7 @@
         .modal-head-actions{display:flex;gap:8px;flex-shrink:0}
         .icon-btn{width:42px;min-height:42px;padding:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.10);color:var(--iq-white)}
         .game-slot{padding:24px}
-        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:10px}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
+        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:10px}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
         .round-head{display:grid;gap:6px;margin-bottom:20px}.round-head span{color:var(--iq-pink-light);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:0}.round-head p{color:var(--iq-muted);line-height:1.45}
         .timeline-board{position:relative;display:flex;align-items:center;gap:10px;min-height:190px;padding:28px 16px;margin:18px 0;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));overflow-x:auto}
         .line-glow{position:absolute;left:24px;right:24px;top:50%;height:6px;background:linear-gradient(90deg,rgba(15,23,42,.74),var(--iq-pink) 18%,var(--iq-pink-light) 50%,var(--iq-pink) 82%,rgba(15,23,42,.74));box-shadow:0 0 24px rgba(255,26,136,.60);opacity:.86}
@@ -1429,7 +1429,7 @@
           .primary:hover,.secondary:hover,.ghost:hover,.event-card:hover,.candidate:hover,.gap:hover{transform:none!important}
         }
         @media (max-width:760px){
-          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-rounds,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
+          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
         }
       `;
     }

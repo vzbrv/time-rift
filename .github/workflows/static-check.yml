@@ -1,0 +1,33 @@
+name: Static check
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  static-check:
+    name: Static check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify required files
+        run: |
+          test -f index.html
+          test -f iq-time-rift.js
+          test -f iq-time-rift-rift-art.png
+
+      - name: Check JavaScript syntax
+        run: node --check iq-time-rift.js
+
+      - name: Check static asset references
+        run: |
+          grep -q './iq-time-rift.js' index.html
+          grep -q '<iq-time-rift></iq-time-rift>' index.html

@@ -479,7 +479,7 @@
     difficultySummary() {
       const rules = this.rulesForDifficulty();
       const missWord = rules.revealAfterAttempts === 1 ? "miss" : "misses";
-      return `${this.selectedDifficulty()}: reveal after ${rules.revealAfterAttempts} ${missWord} or ${rules.hintsBeforeReveal} hints`;
+      return `${this.selectedDifficulty()}: reveal unlocks after ${rules.revealAfterAttempts} ${missWord} or ${rules.hintsBeforeReveal} hints`;
     }
 
     difficultyOptionsMarkup() {
@@ -593,7 +593,7 @@
             <div class="term-row"><b>Corrupted timeline</b><span>One event card is out of order. Tap the card that breaks the chronology.</span></div>
             <div class="term-row"><b>Final restore</b><span>Grab the ⋮⋮ handle to drag rows, or use Earlier / Later, to put every event in order.</span></div>
             <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
-            <div class="term-row"><b>Hints &amp; reveal</b><span>Stuck? Hints narrow it down. After enough misses or hints, reveal solves the round for you — but for a lower grade.</span></div>
+            <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses or hints; once it unlocks, you can keep taking clues or reveal the placement.</span></div>
             <div class="term-row"><b>Difficulty</b><span>Easy / Medium / Hard changes how many misses or hints you get before reveal unlocks.</span></div>
             <div class="term-row"><b>Stability</b><span>The share of today’s rounds you’ve restored so far.</span></div>
           </div>
@@ -802,25 +802,36 @@
 
     hintMarkup(plan) {
       const rs = this.roundState();
-      const hintLimit = this.rulesForDifficulty().hintLimit;
-      const hintButton = rs.hintLevel >= hintLimit - 1 ? "Reveal placement" : rs.hintLevel ? "Get another hint" : "Need a nudge?";
-      if (plan.type === "boss") {
-        const hints = this.hintsFor(plan, this.orderedEvents()[0]);
-        return `
-          <div class="hint-box">
-            <button class="secondary" data-hint>${hintButton}</button>
-            ${rs.hintLevel ? `<p><b>Hint ${rs.hintLevel}/${hintLimit}:</b> ${esc(hints[rs.hintLevel - 1])}</p>` : ""}
-          </div>
-        `;
-      }
-      const target = plan.type === "corrupt" ? this.event(plan.misplaced) : this.event(plan.target);
+      const target = this.hintTarget(plan);
       const hints = this.hintsFor(plan, target);
+      const hintLimit = hints.length;
+      const hintLevel = Math.min(rs.hintLevel, hintLimit);
+      const nextHint = Math.min(hintLevel + 1, hintLimit);
+      const hintButton = hintLevel >= hintLimit ? "All hints shown" : hintLevel ? `Show hint ${nextHint}` : "Show first hint";
+      const shownHint = hintLevel > 0 ? hints[hintLevel - 1] : "";
       return `
         <div class="hint-box">
-          <button class="secondary" data-hint>${hintButton}</button>
-          ${rs.hintLevel ? `<p><b>Hint ${rs.hintLevel}/${hintLimit}:</b> ${esc(hints[rs.hintLevel - 1])}</p>` : ""}
+          <button class="secondary" data-hint ${hintLevel >= hintLimit ? "disabled" : ""}>${hintButton}</button>
+          <div class="hint-copy">
+            ${shownHint ? `<p><b>Hint ${hintLevel}/${hintLimit}:</b> ${esc(shownHint)}</p>` : ""}
+            <small class="hint-meta">${esc(this.hintUnlockCopy(plan, hintLimit))}</small>
+          </div>
         </div>
       `;
+    }
+
+    hintTarget(plan) {
+      if (plan.type === "boss") return this.orderedEvents()[0];
+      return this.event(plan.type === "corrupt" ? plan.misplaced : plan.target);
+    }
+
+    hintUnlockCopy(plan, hintLimit) {
+      const rs = this.roundState();
+      const rules = this.rulesForDifficulty();
+      const revealAt = Math.min(rules.hintsBeforeReveal, hintLimit);
+      if (this.canReveal(plan)) return "Reveal is available now; more hints are optional.";
+      const hintsLeft = Math.max(0, revealAt - rs.hintLevel);
+      return `Reveal unlocks after ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"}.`;
     }
 
     canReveal(plan) {
@@ -833,15 +844,19 @@
 
     revealButtonMarkup(plan) {
       const canReveal = this.canReveal(plan);
-      const label = plan.type === "boss" ? "Anchor timeline" : "Give up this round";
       const rules = this.rulesForDifficulty();
-      const missWord = rules.revealAfterAttempts === 1 ? "miss" : "misses";
-      const bossWord = rules.bossAttempts === 1 ? "submit" : "submits";
+      const label = plan.type === "boss" ? "Anchor timeline" : "Reveal placement";
+      const hintGoal = Math.min(rules.hintsBeforeReveal, this.hintsFor(plan, this.hintTarget(plan)).length);
+      const attemptsLeft = plan.type === "boss"
+        ? Math.max(0, rules.bossAttempts - Number(this.roundState().bossAttempts || 0))
+        : Math.max(0, rules.revealAfterAttempts - this.roundState().attempts);
+      const hintsLeft = Math.max(0, hintGoal - this.roundState().hintLevel);
+      const attemptLabel = plan.type === "boss"
+        ? attemptsLeft === 1 ? "failed check" : "failed checks"
+        : attemptsLeft === 1 ? "miss" : "misses";
       const note = canReveal
-        ? "This will restore the event with help and change the final result quality."
-        : plan.type === "boss"
-          ? `Available after ${rules.bossAttempts} failed boss ${bossWord} or ${rules.hintsBeforeReveal} hints.`
-          : `Available after ${rules.revealAfterAttempts} ${missWord} or ${rules.hintsBeforeReveal} hints.`;
+        ? "This will solve the round with help and change the final result quality."
+        : `Need ${attemptsLeft} more ${attemptLabel} or ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"} to unlock.`;
       return `
         <div class="reveal-action">
           <button class="ghost" data-reveal-round ${canReveal ? "" : "disabled"}>${label}</button>
@@ -1095,15 +1110,20 @@
     }
 
     showHint() {
+      const plan = this.currentPlan();
+      if (!plan) return;
       const rs = this.roundState();
-      const hintLimit = this.rulesForDifficulty().hintLimit;
+      const hintLimit = this.hintsFor(plan, this.hintTarget(plan)).length;
       if (rs.hintLevel >= hintLimit) {
-        this.revealAndContinue();
+        this.liveMessage = "All hints are already shown. Use reveal when it is available.";
+        this.save();
+        this.render();
+        this.openModal();
         return;
       }
       rs.hintLevel += 1;
       this.state.hintsUsed += 1;
-      this.liveMessage = `Hint ${rs.hintLevel} revealed.`;
+      this.liveMessage = this.canReveal(plan) ? `Hint ${rs.hintLevel} revealed. Reveal is now available.` : `Hint ${rs.hintLevel} revealed.`;
       this.save();
       this.render();
       this.openModal();
@@ -1407,7 +1427,7 @@
         .micro{color:var(--iq-muted);margin-top:8px}
         .feedback,.reveal-card,.result,.boss-panel{border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:18px;margin-top:18px}
         .feedback.rift{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}
-        .hint-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hint-box p{color:var(--iq-muted)}
+        .hint-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hint-copy{display:grid;gap:4px;min-width:min(100%,420px)}.hint-box p{color:var(--iq-muted)}.hint-meta{color:rgba(243,244,246,.68);font-weight:750;line-height:1.35}
         .sticky-actions{position:sticky;bottom:0;padding:14px 0;background:linear-gradient(180deg,rgba(23,32,43,0),var(--iq-navy) 32%)}
         .reveal-action{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
         .action-note{max-width:360px;color:rgba(243,244,246,.62);font-size:12px;line-height:1.35}

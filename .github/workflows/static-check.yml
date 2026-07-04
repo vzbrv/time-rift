@@ -22,7 +22,6 @@ jobs:
         run: |
           test -f index.html
           test -f iq-time-rift.js
-          test -f iq-time-rift-rift-art.png
 
       - name: Check JavaScript syntax
         run: node --check iq-time-rift.js

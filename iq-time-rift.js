@@ -659,8 +659,9 @@
             : `
               <div class="round-head">
                 <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Corrupted timeline" : "Timeline placement"}</span>
-                <h3>${plan.type === "boss" ? "Rebuild the full path from earliest to latest." : "Place this event where it belongs in the timeline."}</h3>
+                <h3>${esc(this.roundTitle(plan))}</h3>
                 <p>${esc(this.roundGuidance(plan))}</p>
+                ${this.roundTaskMarkup(plan)}
               </div>
               ${this.roundMarkup(plan)}
               ${this.feedbackMarkup()}
@@ -670,6 +671,37 @@
               </div>
             `
         }
+      `;
+    }
+
+    roundTitle(plan) {
+      if (plan.type === "boss") return "Move rows until the timeline reads earliest to latest.";
+      if (plan.type === "corrupt") return "Tap the one event card that is out of order.";
+      return "Move the event card into one timeline slot.";
+    }
+
+    roundTaskMarkup(plan) {
+      if (plan.type === "boss") return `
+        <div class="round-task">
+          <span><b>Move</b> unlocked rows</span>
+          <span><b>Where</b> earliest at top, latest at bottom</span>
+          <span><b>Check</b> anchor correct rows</span>
+        </div>
+      `;
+      if (plan.type === "corrupt") return `
+        <div class="round-task">
+          <span><b>Find</b> the drifting card</span>
+          <span><b>Action</b> tap that card</span>
+          <span><b>No slots</b> cards only this round</span>
+        </div>
+      `;
+      const target = this.event(plan.target);
+      return `
+        <div class="round-task">
+          <span><b>Move</b> ${esc(target.title)}</span>
+          <span><b>Where</b> tap a glowing slot</span>
+          <span><b>Check</b> left is earlier, right is later</span>
+        </div>
       `;
     }
 
@@ -701,9 +733,10 @@
           ${this.gapButton(anchors.length, rift, true)}
         </div>
         <div class="candidate ${rift ? "rift-shake" : ""}" aria-live="polite">
+          <b class="card-role">Move this event</b>
           <span>${esc(target.era)}</span>
           <strong>${esc(target.title)}</strong>
-          <small>${rift ? "Timeline break detected - try a different slot." : "Tap a slot to place it."}</small>
+          <small>${rift ? "That slot breaks order - choose another glowing slot." : "Tap a glowing Slot button above."}</small>
         </div>
       `;
     }
@@ -720,13 +753,13 @@
               <button class="event-card ${misplaced && rift ? "rift-card" : ""}" data-corrupt="${esc(id)}">
                 <span>${esc(item.era)}</span>
                 <strong>${esc(item.title)}</strong>
-                <small>${misplaced && rift ? "Misplaced" : "Year hidden"}</small>
+                <small>${misplaced && rift ? "Correct - drifting card" : "Tap if this breaks order"}</small>
               </button>
               ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
             `;
           }).join("")}
         </div>
-        <p class="micro">One event is drifting out of order. Find the corrupted card.</p>
+        <p class="micro">This round has no slot move: tap the event card that sits in the wrong place.</p>
       `;
     }
 
@@ -745,7 +778,7 @@
             <strong>${locked.size}/${this.theme.events.length} anchored</strong>
             <span>${attemptsUsed} checked / ${attemptsLeft ? `${attemptsLeft} left` : "Anchor timeline available"}</span>
           </div>
-          <p class="boss-tip">Grab the <b>⋮⋮</b> handle to drag a row, or tap Earlier/Later. Correct rows anchor (✓), reveal their date, and lock in place.</p>
+          <p class="boss-tip">Move unlocked rows so the list runs earliest to latest. Drag the <b>⋮⋮</b> handle or tap Earlier/Later; Check order anchors correct rows and reveals dates.</p>
           <div class="boss-list" role="list">
             ${this.state.bossOrder.map((id, index) => {
               const item = this.event(id);
@@ -784,7 +817,7 @@
     gapButton(index, rift, armed = true) {
       return `
         <button class="gap portal ${rift?.gap === index ? "rift-hit" : ""} ${armed ? "armed" : "disabled"}" data-gap="${index}" ${armed ? "" : "disabled"} aria-label="Place event in slot ${index + 1}">
-          <i></i><span>${rift?.gap === index ? "Break" : "Slot"}</span>
+          <i></i><span>${rift?.gap === index ? "Break" : `Slot ${index + 1}`}</span><small>${rift?.gap === index ? "Wrong spot" : "Place here"}</small>
         </button>
       `;
     }
@@ -1408,6 +1441,10 @@
         .game-slot{padding:24px}
         .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:10px}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
         .round-head{display:grid;gap:6px;margin-bottom:20px}.round-head span{color:var(--iq-pink-light);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:0}.round-head p{color:var(--iq-muted);line-height:1.45}
+        .round-task{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+        .round-task span{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(243,244,246,.78);font-size:12px;line-height:1.35}
+        .round-task b,.card-role{color:var(--iq-pink-light);font-size:11px;text-transform:uppercase;letter-spacing:0}
+        .card-role{display:block}
         .timeline-board{position:relative;display:flex;align-items:center;gap:10px;min-height:190px;padding:28px 16px;margin:18px 0;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));overflow-x:auto}
         .line-glow{position:absolute;left:24px;right:24px;top:50%;height:6px;background:linear-gradient(90deg,rgba(15,23,42,.74),var(--iq-pink) 18%,var(--iq-pink-light) 50%,var(--iq-pink) 82%,rgba(15,23,42,.74));box-shadow:0 0 24px rgba(255,26,136,.60);opacity:.86}
         .timeline-board:not(.armed) .line-glow{background:linear-gradient(90deg,rgba(15,23,42,.78),rgba(255,92,170,.42),rgba(15,23,42,.78));opacity:.58}
@@ -1418,7 +1455,7 @@
         .event-card.locked{border-color:rgba(255,92,170,.50);box-shadow:0 0 0 1px rgba(255,26,136,.20),0 18px 36px rgba(255,26,136,.12)}
         .gap{position:relative;z-index:1;display:grid;place-items:center;gap:6px;min-width:82px;height:82px;border-radius:50%;border:1px solid rgba(255,92,170,.48);background:radial-gradient(circle,rgba(255,92,170,.22),rgba(255,26,136,.10) 52%,rgba(23,32,43,.95));color:var(--iq-muted)}
         .gap:not(.armed){border-color:rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,255,255,.08),rgba(23,32,43,.85));color:rgba(243,244,246,.62)}
-        .gap i{width:28px;height:28px;border-radius:50%;border:2px solid var(--iq-pink-light);box-shadow:0 0 18px var(--iq-pink-light)}.gap span{font-size:11px;font-weight:900;text-transform:uppercase}
+        .gap i{width:28px;height:28px;border-radius:50%;border:2px solid var(--iq-pink-light);box-shadow:0 0 18px var(--iq-pink-light)}.gap span{font-size:11px;font-weight:900;text-transform:uppercase}.gap small{font-size:10px;color:rgba(243,244,246,.62);font-weight:850;text-transform:uppercase}
         .gap.rift-hit{border-color:var(--iq-pink-light);background:radial-gradient(circle,rgba(255,26,136,.34),rgba(39,45,56,.9));box-shadow:0 0 28px rgba(255,26,136,.55)}
         .candidate{width:min(100%,420px);margin:16px auto 0;border-color:rgba(255,92,170,.55);background:linear-gradient(135deg,var(--iq-blue),var(--iq-navy-dark))}
         .rift-shake{border-color:var(--iq-pink-light);animation:shake .42s ease}
@@ -1436,7 +1473,7 @@
         .boss-status{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.boss-tip{margin:0 0 14px;color:var(--iq-muted);font-size:13px;line-height:1.45}.boss-list{display:grid;gap:10px}.boss-row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--iq-blue);border:1px solid rgba(255,255,255,.12)}.boss-row.locked{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}.drag-handle{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);font-weight:900;font-size:13px;letter-spacing:0;cursor:grab}.drag-handle:active{cursor:grabbing}.boss-row.locked .drag-handle{cursor:default}.mobile-move{display:flex;gap:6px}.mobile-move button{min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--iq-white)}
         .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
         .feature-path p,.feature-path span{color:rgba(250,252,248,.78)}.feature-path a{color:var(--iq-pink-light)}
-        h1,h2,h3,p,.event-card,.candidate,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:anywhere}
+        h1,h2,h3,p,.event-card,.candidate,.round-task,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:anywhere}
         .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
         @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
         @keyframes scan{from{transform:translateX(-1.2%)}to{transform:translateX(1.2%)}}
@@ -1449,7 +1486,7 @@
           .primary:hover,.secondary:hover,.ghost:hover,.event-card:hover,.candidate:hover,.gap:hover{transform:none!important}
         }
         @media (max-width:760px){
-          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
+          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.round-task{grid-template-columns:1fr}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
         }
       `;
     }

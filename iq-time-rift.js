@@ -1490,7 +1490,7 @@
         .rift-shell::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,26,136,.18) 1px,transparent 1px),linear-gradient(0deg,rgba(255,92,170,.11) 1px,transparent 1px),linear-gradient(115deg,transparent 0 55%,rgba(255,26,136,.18) 55.2%,transparent 55.9%);background-size:72px 72px,72px 72px,100% 100%;mask-image:linear-gradient(90deg,rgba(0,0,0,.52),rgba(0,0,0,.18) 52%,transparent 86%);pointer-events:none}
         .rift-shell::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 0,rgba(250,252,248,.06) 50%,transparent 100%);background-size:100% 5px;opacity:.18;pointer-events:none}
         .ambient{position:absolute;inset:0;background:linear-gradient(115deg,transparent 0 20%,rgba(255,26,136,.18) 20.2%,transparent 20.8% 54%,rgba(255,92,170,.14) 54.2%,transparent 55%),linear-gradient(180deg,rgba(15,23,42,.05),rgba(15,23,42,.72));animation:scan 9s ease-in-out infinite alternate;pointer-events:none}
-        .hero{position:relative;display:grid;grid-template-columns:minmax(0,.86fr) minmax(300px,1.14fr);gap:32px;align-items:stretch;min-height:500px;z-index:1}
+        .hero{position:relative;display:grid;grid-template-columns:minmax(0,.86fr) minmax(300px,1.14fr);gap:32px;align-items:center;min-height:500px;z-index:1}
         .hero-copy{align-self:center;min-width:0;max-width:620px;padding:26px;border-left:4px solid var(--iq-pink);background:linear-gradient(90deg,rgba(15,23,42,.82),rgba(23,32,43,.46));box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
         .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--iq-pink-light);text-transform:uppercase;letter-spacing:0;font-size:12px;font-weight:900}
         .eyebrow::before{content:"";width:10px;height:10px;background:var(--iq-pink);box-shadow:0 0 18px rgba(255,26,136,.95)}
@@ -1511,14 +1511,14 @@
         .select-control:focus-within select{border-color:var(--iq-pink-light);box-shadow:0 0 0 3px rgba(255,26,136,.22),0 14px 34px rgba(255,26,136,.18)}
         .select-control select option{background:var(--iq-navy);color:var(--iq-white)}
         .source-select{min-width:min(100%,300px)}
-        .primary,.secondary,.ghost,.icon-btn{border:0;border-radius:8px;min-height:48px;padding:0 18px;font-weight:850;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+        .primary,.secondary,.ghost,.icon-btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.12;border:0;border-radius:8px;min-height:48px;padding:0 18px;font-weight:850;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
         .primary{background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);box-shadow:0 14px 34px rgba(255,26,136,.30)}
         .secondary{background:rgba(15,23,42,.62);color:var(--iq-white);border:1px solid rgba(255,255,255,.18)}
         .ghost{background:rgba(15,23,42,.24);color:var(--iq-muted);border:1px solid rgba(243,244,246,.28)}
         .primary:hover,.secondary:hover,.ghost:hover,.event-card:hover,.candidate:hover,.gap:hover{transform:translateY(-2px)}
         .primary:disabled:hover,.secondary:disabled:hover,.ghost:disabled:hover,.gap:disabled:hover{transform:none}
         .wide{width:100%;justify-content:center}
-        .preview{align-self:end;position:relative;min-width:0;min-height:430px;padding:24px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:linear-gradient(180deg,rgba(15,23,42,.34),rgba(15,23,42,.82));backdrop-filter:blur(8px);box-shadow:inset 0 0 0 1px rgba(255,26,136,.16),0 24px 52px rgba(0,0,0,.28)}
+        .preview{align-self:center;position:relative;min-width:0;min-height:430px;padding:24px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:linear-gradient(180deg,rgba(15,23,42,.34),rgba(15,23,42,.82));backdrop-filter:blur(8px);box-shadow:inset 0 0 0 1px rgba(255,26,136,.16),0 24px 52px rgba(0,0,0,.28)}
         .preview::before{content:"";position:absolute;inset:16px;border:1px solid rgba(255,92,170,.26);clip-path:polygon(0 0,70% 0,100% 18%,100% 100%,18% 100%,0 82%);pointer-events:none}
         .preview::after{content:"";position:absolute;right:24px;top:24px;width:92px;height:92px;border:1px solid rgba(255,92,170,.72);border-radius:50%;box-shadow:0 0 0 10px rgba(255,26,136,.08),0 0 34px rgba(255,26,136,.54);pointer-events:none}
         .rift-label{font-size:20px;font-weight:900}
@@ -1533,7 +1533,7 @@
         .preview-eras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
         .preview-era{padding:16px;border-radius:8px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14)}
         .preview-era b,.preview-era span{display:block}.preview-era span{color:rgba(243,244,246,.62);margin-top:8px}
-        .stat-row{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}.stat-row span{padding:12px 14px;border-radius:8px;background:rgba(15,23,42,.70);border:1px solid rgba(255,255,255,.12);font-weight:850;text-align:center}
+        .stat-row{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}.stat-row span{display:grid;place-items:center;min-height:64px;padding:12px 14px;border-radius:8px;background:rgba(15,23,42,.70);border:1px solid rgba(255,255,255,.12);font-weight:850;text-align:center;line-height:1.18}
         .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.72);backdrop-filter:blur(8px);z-index:30}
         .modal{position:fixed;top:3vh;left:max(18px,calc((100vw - 1060px)/2));right:max(18px,calc((100vw - 1060px)/2));max-height:94vh;z-index:40;overflow:auto;border-radius:24px;background:var(--iq-navy);border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.55);animation:rise .24s ease-out}
         .modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;min-width:0;padding:22px 24px;background:rgba(23,32,43,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.12)}

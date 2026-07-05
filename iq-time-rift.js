@@ -668,6 +668,7 @@
                 <h3>${esc(this.roundTitle(plan))}</h3>
                 <p>${esc(this.roundGuidance(plan))}</p>
                 ${this.roundTaskMarkup(plan)}
+                ${this.starterClueMarkup(plan)}
               </div>
               ${this.roundMarkup(plan)}
               ${this.feedbackMarkup()}
@@ -722,6 +723,28 @@
       if (plan.type === "corrupt") return "Read the row left to right. The corrupted card is the one breaking chronology.";
       if (plan.showAnchorYears === false) return "The exact year is hidden; use era tags and neighboring events before spending a hint.";
       return "Use visible dates first, then place the hidden event in the matching slot.";
+    }
+
+    starterClueMarkup(plan) {
+      const rs = this.roundState();
+      if (this.state.roundIndex !== 0 || rs.hintLevel > 0 || rs.attempts > 0 || rs.rifts > 0 || rs.solved) return "";
+      const target = this.hintTarget(plan);
+      const clue = this.freeClueCopy(plan, target);
+      if (!clue) return "";
+      return `<p class="free-clue"><b>Free clue</b> ${esc(clue)}</p>`;
+    }
+
+    freeClueCopy(plan, target) {
+      if (plan.type === "boss") return "Start by moving rows with visible date clues near their chronological neighbors.";
+      if (plan.type === "corrupt") return "The wrong card is the one whose real date neighbors are not beside it.";
+      const anchors = plan.anchors.map((id) => this.event(id)).sort((a, b) => new Date(a.date) - new Date(b.date));
+      const before = anchors.filter((item) => new Date(item.date) < new Date(target.date));
+      const previous = before[before.length - 1];
+      const next = anchors.find((item) => new Date(item.date) > new Date(target.date));
+      if (previous && next) return `${target.title} fits after ${previous.title} and before ${next.title}.`;
+      if (previous) return `${target.title} fits after ${previous.title}.`;
+      if (next) return `${target.title} fits before ${next.title}.`;
+      return target.dependencyHint || target.shortWhy;
     }
 
     roundMarkup(plan) {
@@ -1509,6 +1532,8 @@
         .round-task span{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(243,244,246,.78);font-size:12px;line-height:1.35}
         .round-task b,.card-role{color:var(--iq-pink-light);font-size:11px;text-transform:uppercase;letter-spacing:0}
         .card-role{display:block}
+        .free-clue{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,92,170,.24);background:rgba(255,26,136,.10);color:var(--iq-muted);line-height:1.4}
+        .free-clue b{margin-right:6px;color:var(--iq-pink-light)}
         .timeline-board{position:relative;display:flex;align-items:center;gap:10px;min-height:190px;padding:28px 16px;margin:18px 0;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));overflow-x:auto}
         .line-glow{position:absolute;left:24px;right:24px;top:50%;height:6px;background:linear-gradient(90deg,rgba(15,23,42,.74),var(--iq-pink) 18%,var(--iq-pink-light) 50%,var(--iq-pink) 82%,rgba(15,23,42,.74));box-shadow:0 0 24px rgba(255,26,136,.60);opacity:.86}
         .timeline-board:not(.armed) .line-glow{background:linear-gradient(90deg,rgba(15,23,42,.78),rgba(255,92,170,.42),rgba(15,23,42,.78));opacity:.58}

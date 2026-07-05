@@ -739,16 +739,16 @@
         <div class="timeline-board ${rift ? "cracked" : ""} armed">
           <div class="line-glow"></div>
           ${anchors.map((anchor, index) => `
-            ${this.gapButton(index, rift, true)}
+            ${this.gapButton(index, rift, true, anchors)}
             ${this.timelineCard(anchor, { locked: true, showYear: plan.showAnchorYears !== false })}
           `).join("")}
-          ${this.gapButton(anchors.length, rift, true)}
+          ${this.gapButton(anchors.length, rift, true, anchors)}
         </div>
         <div class="candidate ${rift ? "rift-shake" : ""}" aria-live="polite">
           <b class="card-role">Place this event</b>
           <span>${esc(target.era)}</span>
           <strong>${esc(target.title)}</strong>
-          <small>${rift ? "That slot breaks order - choose another glowing slot." : "Tap a glowing Slot button above."}</small>
+          <small>${rift ? "That slot breaks order - choose another glowing slot." : "Tap Before, Between, or After above."}</small>
         </div>
       `;
     }
@@ -831,10 +831,24 @@
       `;
     }
 
-    gapButton(index, rift, armed = true) {
+    gapButton(index, rift, armed = true, anchors = []) {
+      const before = anchors[index - 1];
+      const after = anchors[index];
+      const hit = rift?.gap === index;
+      const label = hit ? "Break" : before && after ? "Between" : before ? "After" : "Before";
+      const detail = hit ? "Wrong spot" : before && after ? `${before.title} / ${after.title}` : before ? before.title : after ? after.title : "Place here";
+      const aria = hit
+        ? `Wrong slot ${index + 1}`
+        : before && after
+          ? `Place event between ${before.title} and ${after.title}`
+          : before
+            ? `Place event after ${before.title}`
+            : after
+              ? `Place event before ${after.title}`
+              : `Place event in slot ${index + 1}`;
       return `
-        <button class="gap portal ${rift?.gap === index ? "rift-hit" : ""} ${armed ? "armed" : "disabled"}" data-gap="${index}" ${armed ? "" : "disabled"} aria-label="Place event in slot ${index + 1}">
-          <i></i><span>${rift?.gap === index ? "Break" : `Slot ${index + 1}`}</span><small>${rift?.gap === index ? "Wrong spot" : "Place here"}</small>
+        <button class="gap portal ${hit ? "rift-hit" : ""} ${armed ? "armed" : "disabled"}" data-gap="${index}" ${armed ? "" : "disabled"} aria-label="${esc(aria)}">
+          <i></i><span>${esc(label)}</span><small>${esc(detail)}</small>
         </button>
       `;
     }
@@ -1489,7 +1503,7 @@
         .event-card.locked{border-color:rgba(255,92,170,.50);box-shadow:0 0 0 1px rgba(255,26,136,.20),0 18px 36px rgba(255,26,136,.12)}
         .gap{position:relative;z-index:1;display:grid;place-items:center;gap:6px;min-width:82px;height:82px;border-radius:50%;border:1px solid rgba(255,92,170,.48);background:radial-gradient(circle,rgba(255,92,170,.22),rgba(255,26,136,.10) 52%,rgba(23,32,43,.95));color:var(--iq-muted)}
         .gap:not(.armed){border-color:rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,255,255,.08),rgba(23,32,43,.85));color:rgba(243,244,246,.62)}
-        .gap i{width:28px;height:28px;border-radius:50%;border:2px solid var(--iq-pink-light);box-shadow:0 0 18px var(--iq-pink-light)}.gap span{font-size:11px;font-weight:900;text-transform:uppercase}.gap small{font-size:10px;color:rgba(243,244,246,.62);font-weight:850;text-transform:uppercase}
+        .gap i{width:28px;height:28px;border-radius:50%;border:2px solid var(--iq-pink-light);box-shadow:0 0 18px var(--iq-pink-light)}.gap span{font-size:11px;font-weight:900;text-transform:uppercase}.gap small{max-width:76px;font-size:10px;line-height:1.12;text-align:center;color:rgba(243,244,246,.62);font-weight:850}
         .gap.rift-hit{border-color:var(--iq-pink-light);background:radial-gradient(circle,rgba(255,26,136,.34),rgba(39,45,56,.9));box-shadow:0 0 28px rgba(255,26,136,.55)}
         .candidate{width:min(100%,420px);margin:16px auto 0;border-color:rgba(255,92,170,.55);background:linear-gradient(135deg,var(--iq-blue),var(--iq-navy-dark))}
         .rift-shake{border-color:var(--iq-pink-light);animation:shake .42s ease}

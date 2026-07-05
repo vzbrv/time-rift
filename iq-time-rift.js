@@ -784,13 +784,18 @@
       const locked = new Set(rs.bossLockedIds);
       const attemptsUsed = Number(rs.bossAttempts || 0);
       const attemptsLeft = Math.max(0, this.rulesForDifficulty().bossAttempts - attemptsUsed);
+      const canCheck = attemptsLeft > 0;
+      const checkLabel = canCheck ? `Check order (${attemptsLeft} left)` : "Use Anchor timeline below";
+      const tip = canCheck
+        ? "Move unlocked rows so the list runs earliest to latest. Drag the <b>⋮⋮</b> handle or tap Earlier/Later; Check order anchors correct rows and reveals dates."
+        : "Checks are used up. Use Anchor timeline below, or spend hints if you want more clues first.";
       return `
         <div class="boss-panel">
           <div class="boss-status">
             <strong>${locked.size}/${this.theme.events.length} anchored</strong>
             <span>${attemptsUsed} checked / ${attemptsLeft ? `${attemptsLeft} left` : "Anchor timeline available"}</span>
           </div>
-          <p class="boss-tip">Move unlocked rows so the list runs earliest to latest. Drag the <b>⋮⋮</b> handle or tap Earlier/Later; Check order anchors correct rows and reveals dates.</p>
+          <p class="boss-tip">${tip}</p>
           <div class="boss-list" role="list">
             ${this.state.bossOrder.map((id, index) => {
               const item = this.event(id);
@@ -811,7 +816,7 @@
               `;
             }).join("")}
           </div>
-          <button class="primary wide" data-submit-boss>Check order (${attemptsLeft} left)</button>
+          <button class="primary wide" data-submit-boss ${canCheck ? "" : "disabled"}>${esc(checkLabel)}</button>
         </div>
       `;
     }
@@ -1244,6 +1249,14 @@
 
     submitBoss() {
       const rs = this.roundState();
+      if (Number(rs.bossAttempts || 0) >= this.rulesForDifficulty().bossAttempts) {
+        rs.bossFeedback = "Checks are used up. Use Anchor timeline when you are ready.";
+        this.liveMessage = rs.bossFeedback;
+        this.save();
+        this.render();
+        this.openModal();
+        return;
+      }
       const correct = this.orderedEvents().map((item) => item.id);
       const lockedIds = new Set(rs.bossLockedIds);
       const previousLocked = lockedIds.size;

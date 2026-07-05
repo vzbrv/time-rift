@@ -996,6 +996,7 @@
             <span><b>${this.state.rifts}</b>Breaks repaired</span>
             <span><b>${this.state.hintsUsed}</b>Hints used</span>
           </div>
+          ${this.resultQualityMarkup(label, totalRounds)}
           <div class="restored-path">
             ${timeline.map((item) => `<div><b>${esc(this.formatDate(item))}</b><span>${esc(item.title)}</span></div>`).join("")}
           </div>
@@ -1342,6 +1343,20 @@
       return resultLabels.partial;
     }
 
+    resultQualityMarkup(label, totalRounds) {
+      const helpedRounds = this.state.roundResults.filter((result) => result?.hintLevel > 0 || result?.revealed).length;
+      const revealedRounds = this.state.roundResults.filter((result) => result?.revealed).length;
+      const breakRounds = this.state.roundResults.filter((result) => result?.rifts > 0).length;
+      return `<p class="story result-note">${esc(this.resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds))}</p>`;
+    }
+
+    resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds) {
+      const helped = helpedRounds ? `${helpedRounds} round${helpedRounds === 1 ? "" : "s"} used hints or reveal help` : "no rounds used hints or reveals";
+      const revealed = revealedRounds ? `${revealedRounds} round${revealedRounds === 1 ? "" : "s"} were anchored by reveal` : "no rounds were revealed";
+      const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} needed repaired breaks` : "no rounds needed repaired breaks";
+      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total breaks, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
+    }
+
     shareText() {
       const totalRounds = this.totalRounds();
       const markers = this.state.roundResults.map((result) => {
@@ -1560,7 +1575,7 @@
         .reveal-card{display:grid;gap:14px;max-width:720px;margin:12px auto;animation:rise .22s ease-out}.why{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,26,136,.10)}.source-row{display:flex;gap:10px;flex-wrap:wrap}.source-row a,.reading-path a{color:var(--iq-pink-light);font-weight:850;text-decoration:none}
         .tutorial-grid{display:grid;gap:2px}.term-row{display:grid;grid-template-columns:160px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.10)}.term-row:last-child{border-bottom:0}.term-row b{color:var(--iq-pink-light)}.term-row span{color:rgba(243,244,246,.82);line-height:1.45}
         .boss-status{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.boss-tip{margin:0 0 14px;color:var(--iq-muted);font-size:13px;line-height:1.45}.boss-list{display:grid;gap:10px}.boss-row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--iq-blue);border:1px solid rgba(255,255,255,.12)}.boss-row.locked{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}.drag-handle{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);font-weight:900;font-size:13px;letter-spacing:0;cursor:grab}.drag-handle:active{cursor:grabbing}.boss-row.locked .drag-handle{cursor:default}.mobile-move{display:flex;gap:6px}.mobile-move button{min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--iq-white)}
-        .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
+        .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.result-note{margin:0}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
         .feature-path p,.feature-path span{color:rgba(250,252,248,.78)}.feature-path a{color:var(--iq-pink-light)}
         h1,h2,h3,p,.event-card,.candidate,.round-task,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:anywhere}
         .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

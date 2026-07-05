@@ -534,6 +534,11 @@
               <span class="eyebrow">IQ.wiki mini-game</span>
               <h1>Repair the Web3 timeline.</h1>
               <p>Choose a wiki source set, order events, and fix timeline breaks using clues from IQ.wiki wiki pages.</p>
+              <div class="quick-rules" aria-label="Quick game rules">
+                <span><b>1</b> Place events by tapping glowing timeline slots.</span>
+                <span><b>2</b> When no slots appear, tap the corrupted card.</span>
+                <span><b>3</b> Use hints for clues, or reveal after misses.</span>
+              </div>
               <div class="hero-actions">
                 <button class="primary" data-open>Start restoring</button>
                 <label class="select-control">
@@ -589,11 +594,11 @@
           <span class="eyebrow">How IQ Time Rift works</span>
           <h3>Restore the timeline before the break spreads.</h3>
           <div class="tutorial-grid">
-            <div class="term-row"><b>Timeline placement</b><span>Tap the glowing slot on the timeline where the shown event belongs.</span></div>
+            <div class="term-row"><b>Timeline placement</b><span>Do not drag the card; tap the glowing slot where the shown event belongs.</span></div>
             <div class="term-row"><b>Corrupted timeline</b><span>One event card is out of order. Tap the card that breaks the chronology.</span></div>
             <div class="term-row"><b>Final restore</b><span>Grab the ⋮⋮ handle to drag rows, or use Earlier / Later, to put every event in order.</span></div>
             <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
-            <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses or hints; once it unlocks, you can keep taking clues or reveal the placement.</span></div>
+            <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses, failed checks, or hints; once it unlocks, you can keep taking clues or reveal the answer.</span></div>
             <div class="term-row"><b>Difficulty</b><span>Easy / Medium / Hard changes how many misses or hints you get before reveal unlocks.</span></div>
             <div class="term-row"><b>Stability</b><span>The share of today’s rounds you’ve restored so far.</span></div>
           </div>
@@ -650,6 +655,7 @@
       return `
         <div class="progress-block">
           <div class="progress-copy"><strong>Timeline integrity: ${stability}%</strong><span>Round ${this.state.roundIndex + 1}/${totalRounds}</span></div>
+          <p class="current-objective">${esc(this.objectiveCopy(plan))}</p>
           <div class="stability"><i style="width:${stability}%"></i></div>
           <div class="blocks" style="--round-count:${totalRounds}" aria-label="Round progress">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < this.state.restoredRounds ? "on" : ""}"></b>`).join("")}</div>
         </div>
@@ -678,6 +684,12 @@
       if (plan.type === "boss") return "Move rows until the timeline reads earliest to latest.";
       if (plan.type === "corrupt") return "Tap the one event card that is out of order.";
       return "Move the event card into one timeline slot.";
+    }
+
+    objectiveCopy(plan) {
+      if (plan.type === "boss") return "Objective: move rows into earliest-to-latest order, then check the order.";
+      if (plan.type === "corrupt") return "Objective: find the card that breaks the left-to-right timeline.";
+      return "Objective: tap the glowing slot where the event fits between the anchors.";
     }
 
     roundTaskMarkup(plan) {
@@ -733,7 +745,7 @@
           ${this.gapButton(anchors.length, rift, true)}
         </div>
         <div class="candidate ${rift ? "rift-shake" : ""}" aria-live="polite">
-          <b class="card-role">Move this event</b>
+          <b class="card-role">Place this event</b>
           <span>${esc(target.era)}</span>
           <strong>${esc(target.title)}</strong>
           <small>${rift ? "That slot breaks order - choose another glowing slot." : "Tap a glowing Slot button above."}</small>
@@ -864,7 +876,13 @@
       const revealAt = Math.min(rules.hintsBeforeReveal, hintLimit);
       if (this.canReveal(plan)) return "Reveal is available now; more hints are optional.";
       const hintsLeft = Math.max(0, revealAt - rs.hintLevel);
-      return `Reveal unlocks after ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"}.`;
+      const attemptsUsed = plan.type === "boss" ? rs.bossAttempts : rs.attempts;
+      const attemptsNeeded = plan.type === "boss" ? rules.bossAttempts : rules.revealAfterAttempts;
+      const attemptsLeft = Math.max(0, attemptsNeeded - attemptsUsed);
+      const attemptText = plan.type === "boss"
+        ? `${attemptsLeft} more failed ${attemptsLeft === 1 ? "check" : "checks"}`
+        : `${attemptsLeft} more ${attemptsLeft === 1 ? "miss" : "misses"}`;
+      return `Reveal unlocks after ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"} or ${attemptText}.`;
     }
 
     canReveal(plan) {
@@ -1400,6 +1418,9 @@
         h2{font-size:24px;margin-top:4px}
         h3{font-size:28px;line-height:1.05}
         .hero-copy p{max-width:580px;margin-top:18px;color:rgba(250,252,248,.82);font-size:17px;line-height:1.55}
+        .quick-rules{display:grid;gap:9px;margin-top:20px;color:rgba(243,244,246,.82);font-size:13px;font-weight:800;line-height:1.35}
+        .quick-rules span{display:flex;align-items:flex-start;gap:10px}
+        .quick-rules b{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:var(--iq-pink);color:var(--iq-white);font-size:12px;box-shadow:0 0 14px rgba(255,26,136,.42)}
         .hero-actions,.result-actions,.sticky-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
         .hero-actions{align-items:end}
         .select-control{position:relative;display:grid;gap:7px;min-width:min(100%,190px)}
@@ -1439,7 +1460,7 @@
         .modal-head-actions{display:flex;gap:8px;flex-shrink:0}
         .icon-btn{width:42px;min-height:42px;padding:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.10);color:var(--iq-white)}
         .game-slot{padding:24px}
-        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:10px}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
+        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.current-objective{margin-bottom:12px;color:rgba(243,244,246,.84);font-weight:850;line-height:1.35}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
         .round-head{display:grid;gap:6px;margin-bottom:20px}.round-head span{color:var(--iq-pink-light);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:0}.round-head p{color:var(--iq-muted);line-height:1.45}
         .round-task{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
         .round-task span{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(243,244,246,.78);font-size:12px;line-height:1.35}

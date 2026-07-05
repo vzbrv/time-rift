@@ -479,7 +479,7 @@
     difficultySummary() {
       const rules = this.rulesForDifficulty();
       const missWord = rules.revealAfterAttempts === 1 ? "miss" : "misses";
-      return `${this.selectedDifficulty()}: reveal after ${rules.revealAfterAttempts} ${missWord} or ${rules.hintsBeforeReveal} hints`;
+      return `${this.selectedDifficulty()}: reveal unlocks after ${rules.revealAfterAttempts} ${missWord} or ${rules.hintsBeforeReveal} hints`;
     }
 
     difficultyOptionsMarkup() {
@@ -534,6 +534,11 @@
               <span class="eyebrow">IQ.wiki mini-game</span>
               <h1>Repair the Web3 timeline.</h1>
               <p>Choose a wiki source set, order events, and fix timeline breaks using clues from IQ.wiki wiki pages.</p>
+              <div class="quick-rules" aria-label="Quick game rules">
+                <span><b>1</b> Place events by tapping glowing timeline slots.</span>
+                <span><b>2</b> When no slots appear, tap the corrupted card.</span>
+                <span><b>3</b> Use hints for clues, or reveal after misses.</span>
+              </div>
               <div class="hero-actions">
                 <button class="primary" data-open>Start restoring</button>
                 <label class="select-control">
@@ -589,11 +594,11 @@
           <span class="eyebrow">How IQ Time Rift works</span>
           <h3>Restore the timeline before the break spreads.</h3>
           <div class="tutorial-grid">
-            <div class="term-row"><b>Timeline placement</b><span>Tap the glowing slot on the timeline where the shown event belongs.</span></div>
+            <div class="term-row"><b>Timeline placement</b><span>Do not drag the card; tap the glowing slot where the shown event belongs.</span></div>
             <div class="term-row"><b>Corrupted timeline</b><span>One event card is out of order. Tap the card that breaks the chronology.</span></div>
             <div class="term-row"><b>Final restore</b><span>Grab the ⋮⋮ handle to drag rows, or use Earlier / Later, to put every event in order.</span></div>
             <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
-            <div class="term-row"><b>Hints &amp; reveal</b><span>Stuck? Hints narrow it down. After enough misses or hints, reveal solves the round for you — but for a lower grade.</span></div>
+            <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses, failed checks, or hints; once it unlocks, you can keep taking clues or reveal the answer.</span></div>
             <div class="term-row"><b>Difficulty</b><span>Easy / Medium / Hard changes how many misses or hints you get before reveal unlocks.</span></div>
             <div class="term-row"><b>Stability</b><span>The share of today’s rounds you’ve restored so far.</span></div>
           </div>
@@ -613,9 +618,19 @@
     }
 
     previewMarkup() {
+      const eras = this.theme.teaser
+        .map(
+          (item, index) => `
+            <div class="preview-era">
+              <b>${esc(item)}</b>
+              <span>Era ${index + 1} of ${this.theme.teaser.length}</span>
+            </div>
+          `
+        )
+        .join("");
       return `
         <div class="rift-label">Timeline break map: ${esc(this.theme.title)}</div>
-        <div class="preview-count">${this.theme.events.length} timeline events · ${esc(this.difficultySummary())}</div>
+        <div class="preview-count">${this.theme.events.length} events across ${this.theme.teaser.length} eras · ${this.totalRounds()} playable rounds · ${esc(this.difficultySummary())}</div>
         <div class="teaser-path">${this.theme.teaser.map((item) => `<span>${esc(item)}</span>`).join("<i></i>")}</div>
         <div class="schematic-rift" aria-hidden="true">
           <span class="axis"></span>
@@ -625,8 +640,8 @@
           <i class="node n3"></i>
           <i class="node n4"></i>
         </div>
-        <div class="locked-grid">
-          ${[1, 2, 3, 4].map((n) => `<div class="locked-card"><b>Event ${String(n).padStart(2, "0")}</b><span>Order hidden</span></div>`).join("")}
+        <div class="preview-eras">
+          ${eras}
         </div>
       `;
     }
@@ -640,8 +655,9 @@
       return `
         <div class="progress-block">
           <div class="progress-copy"><strong>Timeline integrity: ${stability}%</strong><span>Round ${this.state.roundIndex + 1}/${totalRounds}</span></div>
+          <p class="current-objective">${esc(this.objectiveCopy(plan))}</p>
           <div class="stability"><i style="width:${stability}%"></i></div>
-          <div class="blocks" aria-label="Timeline restored progress">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < this.state.restoredRounds ? "on" : ""}"></b>`).join("")}</div>
+          <div class="blocks" style="--round-count:${totalRounds}" aria-label="Round progress">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < this.state.restoredRounds ? "on" : ""}"></b>`).join("")}</div>
         </div>
         ${
           this.state.phase === "revealing"
@@ -649,8 +665,10 @@
             : `
               <div class="round-head">
                 <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Corrupted timeline" : "Timeline placement"}</span>
-                <h3>${plan.type === "boss" ? "Rebuild the full path from earliest to latest." : "Place this event where it belongs in the timeline."}</h3>
+                <h3>${esc(this.roundTitle(plan))}</h3>
                 <p>${esc(this.roundGuidance(plan))}</p>
+                ${this.roundTaskMarkup(plan)}
+                ${this.starterClueMarkup(plan)}
               </div>
               ${this.roundMarkup(plan)}
               ${this.feedbackMarkup()}
@@ -663,11 +681,70 @@
       `;
     }
 
+    roundTitle(plan) {
+      if (plan.type === "boss") return "Move rows until the timeline reads earliest to latest.";
+      if (plan.type === "corrupt") return "Tap the one event card that is out of order.";
+      return "Move the event card into one timeline slot.";
+    }
+
+    objectiveCopy(plan) {
+      if (plan.type === "boss") return "Objective: move rows into earliest-to-latest order, then check the order.";
+      if (plan.type === "corrupt") return "Objective: find the card that breaks the left-to-right timeline.";
+      return "Objective: tap the glowing slot where the event fits between the anchors.";
+    }
+
+    roundTaskMarkup(plan) {
+      if (plan.type === "boss") return `
+        <div class="round-task">
+          <span><b>Move</b> unlocked rows</span>
+          <span><b>Where</b> earliest at top, latest at bottom</span>
+          <span><b>Check</b> anchor correct rows</span>
+        </div>
+      `;
+      if (plan.type === "corrupt") return `
+        <div class="round-task">
+          <span><b>Find</b> the drifting card</span>
+          <span><b>Action</b> tap that card</span>
+          <span><b>No slots</b> cards only this round</span>
+        </div>
+      `;
+      const target = this.event(plan.target);
+      return `
+        <div class="round-task">
+          <span><b>Move</b> ${esc(target.title)}</span>
+          <span><b>Where</b> tap a glowing slot</span>
+          <span><b>Check</b> left is earlier, right is later</span>
+        </div>
+      `;
+    }
+
     roundGuidance(plan) {
       if (plan.type === "boss") return "Correct rows anchor and reveal dates after each check; focus only on rows still drifting.";
       if (plan.type === "corrupt") return "Read the row left to right. The corrupted card is the one breaking chronology.";
       if (plan.showAnchorYears === false) return "The exact year is hidden; use era tags and neighboring events before spending a hint.";
       return "Use visible dates first, then place the hidden event in the matching slot.";
+    }
+
+    starterClueMarkup(plan) {
+      const rs = this.roundState();
+      if (this.state.roundIndex !== 0 || rs.hintLevel > 0 || rs.attempts > 0 || rs.rifts > 0 || rs.solved) return "";
+      const target = this.hintTarget(plan);
+      const clue = this.freeClueCopy(plan, target);
+      if (!clue) return "";
+      return `<p class="free-clue"><b>Free clue</b> ${esc(clue)}</p>`;
+    }
+
+    freeClueCopy(plan, target) {
+      if (plan.type === "boss") return "Start by moving rows with visible date clues near their chronological neighbors.";
+      if (plan.type === "corrupt") return "The wrong card is the one whose real date neighbors are not beside it.";
+      const anchors = plan.anchors.map((id) => this.event(id)).sort((a, b) => new Date(a.date) - new Date(b.date));
+      const before = anchors.filter((item) => new Date(item.date) < new Date(target.date));
+      const previous = before[before.length - 1];
+      const next = anchors.find((item) => new Date(item.date) > new Date(target.date));
+      if (previous && next) return `${target.title} fits after ${previous.title} and before ${next.title}.`;
+      if (previous) return `${target.title} fits after ${previous.title}.`;
+      if (next) return `${target.title} fits before ${next.title}.`;
+      return target.dependencyHint || target.shortWhy;
     }
 
     roundMarkup(plan) {
@@ -685,15 +762,16 @@
         <div class="timeline-board ${rift ? "cracked" : ""} armed">
           <div class="line-glow"></div>
           ${anchors.map((anchor, index) => `
-            ${this.gapButton(index, rift, true)}
+            ${this.gapButton(index, rift, true, anchors)}
             ${this.timelineCard(anchor, { locked: true, showYear: plan.showAnchorYears !== false })}
           `).join("")}
-          ${this.gapButton(anchors.length, rift, true)}
+          ${this.gapButton(anchors.length, rift, true, anchors)}
         </div>
         <div class="candidate ${rift ? "rift-shake" : ""}" aria-live="polite">
+          <b class="card-role">Place this event</b>
           <span>${esc(target.era)}</span>
           <strong>${esc(target.title)}</strong>
-          <small>${rift ? "Timeline break detected - try a different slot." : "Tap a slot to place it."}</small>
+          <small>${rift ? "That slot breaks order - choose another glowing slot." : "Tap Before, Between, or After above."}</small>
         </div>
       `;
     }
@@ -710,13 +788,13 @@
               <button class="event-card ${misplaced && rift ? "rift-card" : ""}" data-corrupt="${esc(id)}">
                 <span>${esc(item.era)}</span>
                 <strong>${esc(item.title)}</strong>
-                <small>${misplaced && rift ? "Misplaced" : "Year hidden"}</small>
+                <small>${misplaced && rift ? "Correct - drifting card" : "Tap if this breaks order"}</small>
               </button>
               ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
             `;
           }).join("")}
         </div>
-        <p class="micro">One event is drifting out of order. Find the corrupted card.</p>
+        <p class="micro">This round has no slot move: tap the event card that sits in the wrong place.</p>
       `;
     }
 
@@ -729,13 +807,18 @@
       const locked = new Set(rs.bossLockedIds);
       const attemptsUsed = Number(rs.bossAttempts || 0);
       const attemptsLeft = Math.max(0, this.rulesForDifficulty().bossAttempts - attemptsUsed);
+      const canCheck = attemptsLeft > 0;
+      const checkLabel = canCheck ? `Check order (${attemptsLeft} left)` : "Use Anchor timeline below";
+      const tip = canCheck
+        ? "Move unlocked rows so the list runs earliest to latest. Drag the <b>⋮⋮</b> handle or tap Earlier/Later; Check order anchors correct rows and reveals dates."
+        : "Checks are used up. Use Anchor timeline below, or spend hints if you want more clues first.";
       return `
         <div class="boss-panel">
           <div class="boss-status">
             <strong>${locked.size}/${this.theme.events.length} anchored</strong>
             <span>${attemptsUsed} checked / ${attemptsLeft ? `${attemptsLeft} left` : "Anchor timeline available"}</span>
           </div>
-          <p class="boss-tip">Grab the <b>⋮⋮</b> handle to drag a row, or tap Earlier/Later. Correct rows anchor (✓), reveal their date, and lock in place.</p>
+          <p class="boss-tip">${tip}</p>
           <div class="boss-list" role="list">
             ${this.state.bossOrder.map((id, index) => {
               const item = this.event(id);
@@ -756,7 +839,7 @@
               `;
             }).join("")}
           </div>
-          <button class="primary wide" data-submit-boss>Check order (${attemptsLeft} left)</button>
+          <button class="primary wide" data-submit-boss ${canCheck ? "" : "disabled"}>${esc(checkLabel)}</button>
         </div>
       `;
     }
@@ -771,10 +854,24 @@
       `;
     }
 
-    gapButton(index, rift, armed = true) {
+    gapButton(index, rift, armed = true, anchors = []) {
+      const before = anchors[index - 1];
+      const after = anchors[index];
+      const hit = rift?.gap === index;
+      const label = hit ? "Break" : before && after ? "Between" : before ? "After" : "Before";
+      const detail = hit ? "Wrong spot" : before && after ? `${before.title} / ${after.title}` : before ? before.title : after ? after.title : "Place here";
+      const aria = hit
+        ? `Wrong slot ${index + 1}`
+        : before && after
+          ? `Place event between ${before.title} and ${after.title}`
+          : before
+            ? `Place event after ${before.title}`
+            : after
+              ? `Place event before ${after.title}`
+              : `Place event in slot ${index + 1}`;
       return `
-        <button class="gap portal ${rift?.gap === index ? "rift-hit" : ""} ${armed ? "armed" : "disabled"}" data-gap="${index}" ${armed ? "" : "disabled"} aria-label="Place event in slot ${index + 1}">
-          <i></i><span>${rift?.gap === index ? "Break" : "Slot"}</span>
+        <button class="gap portal ${hit ? "rift-hit" : ""} ${armed ? "armed" : "disabled"}" data-gap="${index}" ${armed ? "" : "disabled"} aria-label="${esc(aria)}">
+          <i></i><span>${esc(label)}</span><small>${esc(detail)}</small>
         </button>
       `;
     }
@@ -792,25 +889,42 @@
 
     hintMarkup(plan) {
       const rs = this.roundState();
-      const hintLimit = this.rulesForDifficulty().hintLimit;
-      const hintButton = rs.hintLevel >= hintLimit - 1 ? "Reveal placement" : rs.hintLevel ? "Get another hint" : "Need a nudge?";
-      if (plan.type === "boss") {
-        const hints = this.hintsFor(plan, this.orderedEvents()[0]);
-        return `
-          <div class="hint-box">
-            <button class="secondary" data-hint>${hintButton}</button>
-            ${rs.hintLevel ? `<p><b>Hint ${rs.hintLevel}/${hintLimit}:</b> ${esc(hints[rs.hintLevel - 1])}</p>` : ""}
-          </div>
-        `;
-      }
-      const target = plan.type === "corrupt" ? this.event(plan.misplaced) : this.event(plan.target);
+      const target = this.hintTarget(plan);
       const hints = this.hintsFor(plan, target);
+      const hintLimit = hints.length;
+      const hintLevel = Math.min(rs.hintLevel, hintLimit);
+      const nextHint = Math.min(hintLevel + 1, hintLimit);
+      const hintButton = hintLevel >= hintLimit ? "All hints shown" : hintLevel ? `Show hint ${nextHint}` : "Show first hint";
+      const shownHint = hintLevel > 0 ? hints[hintLevel - 1] : "";
       return `
         <div class="hint-box">
-          <button class="secondary" data-hint>${hintButton}</button>
-          ${rs.hintLevel ? `<p><b>Hint ${rs.hintLevel}/${hintLimit}:</b> ${esc(hints[rs.hintLevel - 1])}</p>` : ""}
+          <button class="secondary" data-hint ${hintLevel >= hintLimit ? "disabled" : ""}>${hintButton}</button>
+          <div class="hint-copy">
+            ${shownHint ? `<p><b>Hint ${hintLevel}/${hintLimit}:</b> ${esc(shownHint)}</p>` : ""}
+            <small class="hint-meta">${esc(this.hintUnlockCopy(plan, hintLimit))}</small>
+          </div>
         </div>
       `;
+    }
+
+    hintTarget(plan) {
+      if (plan.type === "boss") return this.orderedEvents()[0];
+      return this.event(plan.type === "corrupt" ? plan.misplaced : plan.target);
+    }
+
+    hintUnlockCopy(plan, hintLimit) {
+      const rs = this.roundState();
+      const rules = this.rulesForDifficulty();
+      const revealAt = Math.min(rules.hintsBeforeReveal, hintLimit);
+      if (this.canReveal(plan)) return "Reveal is available now; more hints are optional.";
+      const hintsLeft = Math.max(0, revealAt - rs.hintLevel);
+      const attemptsUsed = plan.type === "boss" ? rs.bossAttempts : rs.attempts;
+      const attemptsNeeded = plan.type === "boss" ? rules.bossAttempts : rules.revealAfterAttempts;
+      const attemptsLeft = Math.max(0, attemptsNeeded - attemptsUsed);
+      const attemptText = plan.type === "boss"
+        ? `${attemptsLeft} more failed ${attemptsLeft === 1 ? "check" : "checks"}`
+        : `${attemptsLeft} more ${attemptsLeft === 1 ? "miss" : "misses"}`;
+      return `Reveal unlocks after ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"} or ${attemptText}.`;
     }
 
     canReveal(plan) {
@@ -823,15 +937,19 @@
 
     revealButtonMarkup(plan) {
       const canReveal = this.canReveal(plan);
-      const label = plan.type === "boss" ? "Anchor timeline" : "Give up this round";
       const rules = this.rulesForDifficulty();
-      const missWord = rules.revealAfterAttempts === 1 ? "miss" : "misses";
-      const bossWord = rules.bossAttempts === 1 ? "submit" : "submits";
+      const label = plan.type === "boss" ? "Anchor timeline" : "Reveal placement";
+      const hintGoal = Math.min(rules.hintsBeforeReveal, this.hintsFor(plan, this.hintTarget(plan)).length);
+      const attemptsLeft = plan.type === "boss"
+        ? Math.max(0, rules.bossAttempts - Number(this.roundState().bossAttempts || 0))
+        : Math.max(0, rules.revealAfterAttempts - this.roundState().attempts);
+      const hintsLeft = Math.max(0, hintGoal - this.roundState().hintLevel);
+      const attemptLabel = plan.type === "boss"
+        ? attemptsLeft === 1 ? "failed check" : "failed checks"
+        : attemptsLeft === 1 ? "miss" : "misses";
       const note = canReveal
-        ? "This will restore the event with help and change the final result quality."
-        : plan.type === "boss"
-          ? `Available after ${rules.bossAttempts} failed boss ${bossWord} or ${rules.hintsBeforeReveal} hints.`
-          : `Available after ${rules.revealAfterAttempts} ${missWord} or ${rules.hintsBeforeReveal} hints.`;
+        ? "This will solve the round with help and change the final result quality."
+        : `Need ${attemptsLeft} more ${attemptLabel} or ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"} to unlock.`;
       return `
         <div class="reveal-action">
           <button class="ghost" data-reveal-round ${canReveal ? "" : "disabled"}>${label}</button>
@@ -874,10 +992,11 @@
           <h3>Timeline restored.</h3>
           <p>You repaired today’s wiki-sourced timeline: ${esc(this.theme.title)}.</p>
           <div class="result-grid">
-            <span><b>${this.state.restoredRounds}/${totalRounds}</b>Timeline restored</span>
+            <span><b>${this.state.restoredRounds}/${totalRounds}</b>Rounds restored</span>
             <span><b>${this.state.rifts}</b>Breaks repaired</span>
             <span><b>${this.state.hintsUsed}</b>Hints used</span>
           </div>
+          ${this.resultQualityMarkup(label, totalRounds)}
           <div class="restored-path">
             ${timeline.map((item) => `<div><b>${esc(this.formatDate(item))}</b><span>${esc(item.title)}</span></div>`).join("")}
           </div>
@@ -963,7 +1082,7 @@
         button.addEventListener("click", () => {
           const id = button.dataset.corrupt;
           if (id === plan.misplaced) this.solveRound(this.event(id), "Timeline stabilized.", this.neighborExplanation(id));
-          else this.openRift(`Timeline break detected - ${this.event(id).title} is stable. Find the event that breaks the order.`, { cardId: id });
+          else this.openRift(this.corruptFeedback(id), { cardId: id });
         });
       });
     }
@@ -1085,15 +1204,20 @@
     }
 
     showHint() {
+      const plan = this.currentPlan();
+      if (!plan) return;
       const rs = this.roundState();
-      const hintLimit = this.rulesForDifficulty().hintLimit;
+      const hintLimit = this.hintsFor(plan, this.hintTarget(plan)).length;
       if (rs.hintLevel >= hintLimit) {
-        this.revealAndContinue();
+        this.liveMessage = "All hints are already shown. Use reveal when it is available.";
+        this.save();
+        this.render();
+        this.openModal();
         return;
       }
       rs.hintLevel += 1;
       this.state.hintsUsed += 1;
-      this.liveMessage = `Hint ${rs.hintLevel} revealed.`;
+      this.liveMessage = this.canReveal(plan) ? `Hint ${rs.hintLevel} revealed. Reveal is now available.` : `Hint ${rs.hintLevel} revealed.`;
       this.save();
       this.render();
       this.openModal();
@@ -1163,6 +1287,14 @@
 
     submitBoss() {
       const rs = this.roundState();
+      if (Number(rs.bossAttempts || 0) >= this.rulesForDifficulty().bossAttempts) {
+        rs.bossFeedback = "Checks are used up. Use Anchor timeline when you are ready.";
+        this.liveMessage = rs.bossFeedback;
+        this.save();
+        this.render();
+        this.openModal();
+        return;
+      }
       const correct = this.orderedEvents().map((item) => item.id);
       const lockedIds = new Set(rs.bossLockedIds);
       const previousLocked = lockedIds.size;
@@ -1211,6 +1343,20 @@
       return resultLabels.partial;
     }
 
+    resultQualityMarkup(label, totalRounds) {
+      const helpedRounds = this.state.roundResults.filter((result) => result?.hintLevel > 0 || result?.revealed).length;
+      const revealedRounds = this.state.roundResults.filter((result) => result?.revealed).length;
+      const breakRounds = this.state.roundResults.filter((result) => result?.rifts > 0).length;
+      return `<p class="story result-note">${esc(this.resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds))}</p>`;
+    }
+
+    resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds) {
+      const helped = helpedRounds ? `${helpedRounds} round${helpedRounds === 1 ? "" : "s"} used hints or reveal help` : "no rounds used hints or reveals";
+      const revealed = revealedRounds ? `${revealedRounds} round${revealedRounds === 1 ? "" : "s"} were anchored by reveal` : "no rounds were revealed";
+      const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} needed repaired breaks` : "no rounds needed repaired breaks";
+      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total breaks, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
+    }
+
     shareText() {
       const totalRounds = this.totalRounds();
       const markers = this.state.roundResults.map((result) => {
@@ -1222,7 +1368,7 @@
       while (markers.length < totalRounds) markers.push("◌");
       return [
         `IQ Time Rift — ${this.theme.title}`,
-        `${this.qualityLabel()}: ${this.state.restoredRounds}/${totalRounds}`,
+        `${this.qualityLabel()}: ${this.state.restoredRounds}/${totalRounds} rounds`,
         `Breaks repaired: ${this.state.rifts} · Hints: ${this.state.hintsUsed}`,
         markers.join(""),
         "https://iq.wiki",
@@ -1263,6 +1409,22 @@
       const after = ordered[index + 1];
       const relation = `${before ? `It came after ${before.title}` : "It opened the path"}${after ? ` and before ${after.title}` : " and completed this timeline"}.`;
       return `${item.title} belongs in ${this.formatDate(item)}. ${relation}`;
+    }
+
+    corruptFeedback(id) {
+      const item = this.event(id);
+      const ordered = this.orderedEvents();
+      const index = ordered.findIndex((event) => event.id === id);
+      const before = ordered[index - 1];
+      const after = ordered[index + 1];
+      const window = before && after
+        ? `between ${before.title} and ${after.title}`
+        : before
+          ? `after ${before.title}`
+          : after
+            ? `before ${after.title}`
+            : "in this timeline";
+      return `${item.title} is stable; it belongs ${window}. Look for the card sitting away from its real date neighbors.`;
     }
 
     shuffle(values, seed = `${this.theme.id}:${TODAY_KEY}`) {
@@ -1337,6 +1499,9 @@
         h2{font-size:24px;margin-top:4px}
         h3{font-size:28px;line-height:1.05}
         .hero-copy p{max-width:580px;margin-top:18px;color:rgba(250,252,248,.82);font-size:17px;line-height:1.55}
+        .quick-rules{display:grid;gap:9px;margin-top:20px;color:rgba(243,244,246,.82);font-size:13px;font-weight:800;line-height:1.35}
+        .quick-rules span{display:flex;align-items:flex-start;gap:10px}
+        .quick-rules b{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:var(--iq-pink);color:var(--iq-white);font-size:12px;box-shadow:0 0 14px rgba(255,26,136,.42)}
         .hero-actions,.result-actions,.sticky-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
         .hero-actions{align-items:end}
         .select-control{position:relative;display:grid;gap:7px;min-width:min(100%,190px)}
@@ -1365,9 +1530,9 @@
         .schematic-rift .node{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--iq-navy-dark);border:2px solid var(--iq-pink-light);transform:translate(-50%,-50%);box-shadow:0 0 14px rgba(255,26,136,.62)}
         .schematic-rift .n1{left:18%}.schematic-rift .n2{left:38%}.schematic-rift .n3{left:68%}.schematic-rift .n4{left:86%}
         .schematic-rift .fracture{position:absolute;left:52%;top:9px;bottom:9px;width:24px;transform:translateX(-50%);background:linear-gradient(180deg,var(--iq-pink-light),var(--iq-pink));clip-path:polygon(42% 0,82% 23%,58% 23%,95% 52%,55% 48%,70% 100%,20% 62%,42% 62%,8% 28%,38% 30%);filter:drop-shadow(0 0 16px rgba(255,26,136,.9))}
-        .locked-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-        .locked-card{padding:18px;border-radius:8px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14);filter:blur(.15px)}
-        .locked-card b,.locked-card span{display:block}.locked-card span{color:rgba(243,244,246,.62);margin-top:8px}
+        .preview-eras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+        .preview-era{padding:16px;border-radius:8px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14)}
+        .preview-era b,.preview-era span{display:block}.preview-era span{color:rgba(243,244,246,.62);margin-top:8px}
         .stat-row{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}.stat-row span{padding:12px 14px;border-radius:8px;background:rgba(15,23,42,.70);border:1px solid rgba(255,255,255,.12);font-weight:850;text-align:center}
         .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.72);backdrop-filter:blur(8px);z-index:30}
         .modal{position:fixed;top:3vh;left:max(18px,calc((100vw - 1060px)/2));right:max(18px,calc((100vw - 1060px)/2));max-height:94vh;z-index:40;overflow:auto;border-radius:24px;background:var(--iq-navy);border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.55);animation:rise .24s ease-out}
@@ -1376,8 +1541,14 @@
         .modal-head-actions{display:flex;gap:8px;flex-shrink:0}
         .icon-btn{width:42px;min-height:42px;padding:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.10);color:var(--iq-white)}
         .game-slot{padding:24px}
-        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:10px}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
+        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.current-objective{margin-bottom:12px;color:rgba(243,244,246,.84);font-weight:850;line-height:1.35}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
         .round-head{display:grid;gap:6px;margin-bottom:20px}.round-head span{color:var(--iq-pink-light);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:0}.round-head p{color:var(--iq-muted);line-height:1.45}
+        .round-task{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+        .round-task span{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(243,244,246,.78);font-size:12px;line-height:1.35}
+        .round-task b,.card-role{color:var(--iq-pink-light);font-size:11px;text-transform:uppercase;letter-spacing:0}
+        .card-role{display:block}
+        .free-clue{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,92,170,.24);background:rgba(255,26,136,.10);color:var(--iq-muted);line-height:1.4}
+        .free-clue b{margin-right:6px;color:var(--iq-pink-light)}
         .timeline-board{position:relative;display:flex;align-items:center;gap:10px;min-height:190px;padding:28px 16px;margin:18px 0;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));overflow-x:auto}
         .line-glow{position:absolute;left:24px;right:24px;top:50%;height:6px;background:linear-gradient(90deg,rgba(15,23,42,.74),var(--iq-pink) 18%,var(--iq-pink-light) 50%,var(--iq-pink) 82%,rgba(15,23,42,.74));box-shadow:0 0 24px rgba(255,26,136,.60);opacity:.86}
         .timeline-board:not(.armed) .line-glow{background:linear-gradient(90deg,rgba(15,23,42,.78),rgba(255,92,170,.42),rgba(15,23,42,.78));opacity:.58}
@@ -1388,7 +1559,7 @@
         .event-card.locked{border-color:rgba(255,92,170,.50);box-shadow:0 0 0 1px rgba(255,26,136,.20),0 18px 36px rgba(255,26,136,.12)}
         .gap{position:relative;z-index:1;display:grid;place-items:center;gap:6px;min-width:82px;height:82px;border-radius:50%;border:1px solid rgba(255,92,170,.48);background:radial-gradient(circle,rgba(255,92,170,.22),rgba(255,26,136,.10) 52%,rgba(23,32,43,.95));color:var(--iq-muted)}
         .gap:not(.armed){border-color:rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,255,255,.08),rgba(23,32,43,.85));color:rgba(243,244,246,.62)}
-        .gap i{width:28px;height:28px;border-radius:50%;border:2px solid var(--iq-pink-light);box-shadow:0 0 18px var(--iq-pink-light)}.gap span{font-size:11px;font-weight:900;text-transform:uppercase}
+        .gap i{width:28px;height:28px;border-radius:50%;border:2px solid var(--iq-pink-light);box-shadow:0 0 18px var(--iq-pink-light)}.gap span{font-size:11px;font-weight:900;text-transform:uppercase}.gap small{max-width:76px;font-size:10px;line-height:1.12;text-align:center;color:rgba(243,244,246,.62);font-weight:850}
         .gap.rift-hit{border-color:var(--iq-pink-light);background:radial-gradient(circle,rgba(255,26,136,.34),rgba(39,45,56,.9));box-shadow:0 0 28px rgba(255,26,136,.55)}
         .candidate{width:min(100%,420px);margin:16px auto 0;border-color:rgba(255,92,170,.55);background:linear-gradient(135deg,var(--iq-blue),var(--iq-navy-dark))}
         .rift-shake{border-color:var(--iq-pink-light);animation:shake .42s ease}
@@ -1397,16 +1568,16 @@
         .micro{color:var(--iq-muted);margin-top:8px}
         .feedback,.reveal-card,.result,.boss-panel{border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:18px;margin-top:18px}
         .feedback.rift{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}
-        .hint-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hint-box p{color:var(--iq-muted)}
+        .hint-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hint-copy{display:grid;gap:4px;min-width:min(100%,420px)}.hint-box p{color:var(--iq-muted)}.hint-meta{color:rgba(243,244,246,.68);font-weight:750;line-height:1.35}
         .sticky-actions{position:sticky;bottom:0;padding:14px 0;background:linear-gradient(180deg,rgba(23,32,43,0),var(--iq-navy) 32%)}
         .reveal-action{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
         .action-note{max-width:360px;color:rgba(243,244,246,.62);font-size:12px;line-height:1.35}
         .reveal-card{display:grid;gap:14px;max-width:720px;margin:12px auto;animation:rise .22s ease-out}.why{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,26,136,.10)}.source-row{display:flex;gap:10px;flex-wrap:wrap}.source-row a,.reading-path a{color:var(--iq-pink-light);font-weight:850;text-decoration:none}
         .tutorial-grid{display:grid;gap:2px}.term-row{display:grid;grid-template-columns:160px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.10)}.term-row:last-child{border-bottom:0}.term-row b{color:var(--iq-pink-light)}.term-row span{color:rgba(243,244,246,.82);line-height:1.45}
         .boss-status{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.boss-tip{margin:0 0 14px;color:var(--iq-muted);font-size:13px;line-height:1.45}.boss-list{display:grid;gap:10px}.boss-row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--iq-blue);border:1px solid rgba(255,255,255,.12)}.boss-row.locked{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}.drag-handle{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);font-weight:900;font-size:13px;letter-spacing:0;cursor:grab}.drag-handle:active{cursor:grabbing}.boss-row.locked .drag-handle{cursor:default}.mobile-move{display:flex;gap:6px}.mobile-move button{min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--iq-white)}
-        .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
+        .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.result-note{margin:0}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
         .feature-path p,.feature-path span{color:rgba(250,252,248,.78)}.feature-path a{color:var(--iq-pink-light)}
-        h1,h2,h3,p,.event-card,.candidate,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:anywhere}
+        h1,h2,h3,p,.event-card,.candidate,.round-task,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:anywhere}
         .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
         @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
         @keyframes scan{from{transform:translateX(-1.2%)}to{transform:translateX(1.2%)}}
@@ -1419,7 +1590,7 @@
           .primary:hover,.secondary:hover,.ghost:hover,.event-card:hover,.candidate:hover,.gap:hover{transform:none!important}
         }
         @media (max-width:760px){
-          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.locked-grid,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
+          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.round-task{grid-template-columns:1fr}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
         }
       `;
     }

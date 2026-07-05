@@ -1058,7 +1058,7 @@
         button.addEventListener("click", () => {
           const id = button.dataset.corrupt;
           if (id === plan.misplaced) this.solveRound(this.event(id), "Timeline stabilized.", this.neighborExplanation(id));
-          else this.openRift(`Timeline break detected - ${this.event(id).title} is stable. Find the event that breaks the order.`, { cardId: id });
+          else this.openRift(this.corruptFeedback(id), { cardId: id });
         });
       });
     }
@@ -1371,6 +1371,22 @@
       const after = ordered[index + 1];
       const relation = `${before ? `It came after ${before.title}` : "It opened the path"}${after ? ` and before ${after.title}` : " and completed this timeline"}.`;
       return `${item.title} belongs in ${this.formatDate(item)}. ${relation}`;
+    }
+
+    corruptFeedback(id) {
+      const item = this.event(id);
+      const ordered = this.orderedEvents();
+      const index = ordered.findIndex((event) => event.id === id);
+      const before = ordered[index - 1];
+      const after = ordered[index + 1];
+      const window = before && after
+        ? `between ${before.title} and ${after.title}`
+        : before
+          ? `after ${before.title}`
+          : after
+            ? `before ${after.title}`
+            : "in this timeline";
+      return `${item.title} is stable; it belongs ${window}. Look for the card sitting away from its real date neighbors.`;
     }
 
     shuffle(values, seed = `${this.theme.id}:${TODAY_KEY}`) {

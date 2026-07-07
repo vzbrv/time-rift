@@ -536,7 +536,7 @@
               <p>Choose a wiki source set, order events, and fix timeline breaks using clues from IQ.wiki wiki pages.</p>
               <div class="quick-rules" aria-label="Quick game rules">
                 <span><b>1</b> Drag event cards onto glowing timeline targets.</span>
-                <span><b>2</b> In corrupted rounds, drag the drifting card into the rift check.</span>
+                <span><b>2</b> In corrupted rounds, drag the suspect card into the rift check.</span>
                 <span><b>3</b> Use hints for clues, or reveal after misses.</span>
               </div>
               <div class="hero-actions">
@@ -595,7 +595,7 @@
           <h3>Restore the timeline before the break spreads.</h3>
           <div class="tutorial-grid">
             <div class="term-row"><b>Timeline placement</b><span>Drag the bottom event card onto the glowing slot where the shown event belongs.</span></div>
-            <div class="term-row"><b>Corrupted timeline</b><span>One event card is out of order. Drag that drifting card into the rift check.</span></div>
+            <div class="term-row"><b>Corrupted timeline</b><span>One event card is out of order. Drag the suspect card into the rift check.</span></div>
             <div class="term-row"><b>Final restore</b><span>Drag unlocked rows into earliest-to-latest order, or use Earlier / Later as fallback controls.</span></div>
             <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
             <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses, failed checks, or hints; once it unlocks, you can keep taking clues or reveal the answer.</span></div>
@@ -683,7 +683,7 @@
 
     roundTitle(plan) {
       if (plan.type === "boss") return "Drag rows until the timeline reads earliest to latest.";
-      if (plan.type === "corrupt") return "Drag the out-of-order event card into the rift check.";
+      if (plan.type === "corrupt") return "Drag the card that breaks the timeline into the rift check.";
       return "Move the event card into one timeline slot.";
     }
 
@@ -703,7 +703,7 @@
       `;
       if (plan.type === "corrupt") return `
         <div class="round-task">
-          <span><b>Find</b> the drifting card</span>
+          <span><b>Find</b> the suspect card</span>
           <span><b>Action</b> drag it to rift check</span>
           <span><b>Fallback</b> tap the card also works</span>
         </div>
@@ -720,7 +720,7 @@
 
     roundGuidance(plan) {
       if (plan.type === "boss") return "Correct rows anchor and reveal dates after each check; drag only rows still drifting.";
-      if (plan.type === "corrupt") return "Read the row left to right. Drag the corrupted card into the rift check.";
+      if (plan.type === "corrupt") return "Read the row left to right. Drag the card whose date no longer fits into the rift check.";
       if (plan.showAnchorYears === false) return "The exact year is hidden; drag by era tags and neighboring events before spending a hint.";
       return "Use visible dates first, then drag the hidden event onto the matching slot.";
     }
@@ -736,7 +736,7 @@
 
     freeClueCopy(plan, target) {
       if (plan.type === "boss") return "Start by moving rows with visible date clues near their chronological neighbors.";
-      if (plan.type === "corrupt") return "The wrong card is the one whose real date neighbors are not beside it.";
+      if (plan.type === "corrupt") return "The suspect card is the one whose real date neighbors are not beside it.";
       const anchors = plan.anchors.map((id) => this.event(id)).sort((a, b) => new Date(a.date) - new Date(b.date));
       const before = anchors.filter((item) => new Date(item.date) < new Date(target.date));
       const previous = before[before.length - 1];
@@ -785,10 +785,11 @@
             const item = this.event(id);
             const misplaced = id === plan.misplaced;
             return `
-              <button class="event-card ${misplaced && rift ? "rift-card" : ""}" data-corrupt="${esc(id)}">
+              <button class="event-card ${misplaced && rift ? "rift-card" : ""}" data-corrupt="${esc(id)}" aria-label="${esc(`Drag ${item.title} to the rift check if it breaks the timeline order`)}">
+                <b class="drag-cue">Drag to test</b>
                 <span>${esc(item.era)}</span>
                 <strong>${esc(item.title)}</strong>
-                <small>${misplaced && rift ? "Correct - drifting card" : "Drag to rift check if this breaks order"}</small>
+                <small>${misplaced && rift ? "Correct - out-of-order card" : "Drag to rift check if this breaks order"}</small>
               </button>
               ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
             `;
@@ -796,9 +797,9 @@
         </div>
         <div class="corrupt-drop" data-corrupt-drop>
           <b>Rift check</b>
-          <span>Drop the drifting card here</span>
+          <span>Drop the suspect card here</span>
         </div>
-        <p class="micro">Drag the drifting card into the rift check. You can still tap a card to check it.</p>
+        <p class="micro">Drag the suspect card into the rift check. You can still tap a card to check it.</p>
       `;
     }
 
@@ -926,19 +927,31 @@
       return this.event(plan.type === "corrupt" ? plan.misplaced : plan.target);
     }
 
-    hintUnlockCopy(plan, hintLimit) {
+    countPhrase(count, singular, plural = `${singular}s`) {
+      if (count <= 0) return "";
+      return `${count} more ${count === 1 ? singular : plural}`;
+    }
+
+    revealUnlockNeedCopy(plan, hintLimit = this.hintsFor(plan, this.hintTarget(plan)).length) {
       const rs = this.roundState();
       const rules = this.rulesForDifficulty();
       const revealAt = Math.min(rules.hintsBeforeReveal, hintLimit);
-      if (this.canReveal(plan)) return "Reveal is available now; more hints are optional.";
-      const hintsLeft = Math.max(0, revealAt - rs.hintLevel);
-      const attemptsUsed = plan.type === "boss" ? rs.bossAttempts : rs.attempts;
+      const hintsLeft = Math.max(0, revealAt - Number(rs.hintLevel || 0));
+      const attemptsUsed = plan.type === "boss" ? Number(rs.bossAttempts || 0) : Number(rs.attempts || 0);
       const attemptsNeeded = plan.type === "boss" ? rules.bossAttempts : rules.revealAfterAttempts;
       const attemptsLeft = Math.max(0, attemptsNeeded - attemptsUsed);
-      const attemptText = plan.type === "boss"
-        ? `${attemptsLeft} more failed ${attemptsLeft === 1 ? "check" : "checks"}`
-        : `${attemptsLeft} more ${attemptsLeft === 1 ? "miss" : "misses"}`;
-      return `Reveal unlocks after ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"} or ${attemptText}.`;
+      const parts = [
+        this.countPhrase(hintsLeft, "hint"),
+        plan.type === "boss"
+          ? this.countPhrase(attemptsLeft, "failed check")
+          : this.countPhrase(attemptsLeft, "miss", "misses"),
+      ].filter(Boolean);
+      return parts.length ? parts.join(" or ") : "no more hints or misses";
+    }
+
+    hintUnlockCopy(plan, hintLimit) {
+      if (this.canReveal(plan)) return "Reveal is available now; more hints are optional.";
+      return `Reveal unlocks after ${this.revealUnlockNeedCopy(plan, hintLimit)}.`;
     }
 
     canReveal(plan) {
@@ -951,19 +964,10 @@
 
     revealButtonMarkup(plan) {
       const canReveal = this.canReveal(plan);
-      const rules = this.rulesForDifficulty();
       const label = plan.type === "boss" ? "Anchor timeline" : "Reveal placement";
-      const hintGoal = Math.min(rules.hintsBeforeReveal, this.hintsFor(plan, this.hintTarget(plan)).length);
-      const attemptsLeft = plan.type === "boss"
-        ? Math.max(0, rules.bossAttempts - Number(this.roundState().bossAttempts || 0))
-        : Math.max(0, rules.revealAfterAttempts - this.roundState().attempts);
-      const hintsLeft = Math.max(0, hintGoal - this.roundState().hintLevel);
-      const attemptLabel = plan.type === "boss"
-        ? attemptsLeft === 1 ? "failed check" : "failed checks"
-        : attemptsLeft === 1 ? "miss" : "misses";
       const note = canReveal
-        ? "This will solve the round with help and change the final result quality."
-        : `Need ${attemptsLeft} more ${attemptLabel} or ${hintsLeft} more ${hintsLeft === 1 ? "hint" : "hints"} to unlock.`;
+        ? "Reveal available: solves this round with help and affects result quality."
+        : `Reveal locked: ${this.revealUnlockNeedCopy(plan)} needed.`;
       return `
         <div class="reveal-action">
           <button class="ghost" data-reveal-round ${canReveal ? "" : "disabled"}>${label}</button>
@@ -1291,7 +1295,7 @@
             }, 0);
             this.submitCorrupt(plan, card.dataset.corrupt);
           } else if (didDrag) {
-            this.showDropMiss(drop, "Drop the drifting card on Rift check.");
+            this.showDropMiss(drop, "Drop the suspect card on Rift check.");
           }
         };
         cancel = () => {
@@ -1813,7 +1817,7 @@
         .select-control:focus-within select{border-color:var(--iq-pink-light);box-shadow:0 0 0 3px rgba(255,26,136,.22),0 14px 34px rgba(255,26,136,.18)}
         .select-control select option{background:var(--iq-navy);color:var(--iq-white)}
         .source-select{min-width:min(100%,300px)}
-        .primary,.secondary,.ghost,.icon-btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.12;border:0;border-radius:8px;min-height:48px;padding:0 18px;font-weight:850;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+        .primary,.secondary,.ghost,.icon-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.12;white-space:normal;border:0;border-radius:8px;min-height:48px;padding:0 18px;font-weight:850;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
         .primary{background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);box-shadow:0 14px 34px rgba(255,26,136,.30)}
         .secondary{background:rgba(15,23,42,.62);color:var(--iq-white);border:1px solid rgba(255,255,255,.18)}
         .ghost{background:rgba(15,23,42,.24);color:var(--iq-muted);border:1px solid rgba(243,244,246,.28)}
@@ -1835,14 +1839,15 @@
         .preview-eras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
         .preview-era{padding:16px;border-radius:8px;background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.14)}
         .preview-era b,.preview-era span{display:block}.preview-era span{color:rgba(243,244,246,.62);margin-top:8px}
-        .stat-row{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}.stat-row span{display:flex;align-items:center;justify-content:center;min-height:68px;padding:0 16px;border-radius:8px;background:rgba(15,23,42,.70);border:1px solid rgba(255,255,255,.12);font-weight:850;text-align:center;line-height:1.18}
+        .stat-row{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}.stat-row span{display:grid;place-items:center;align-content:center;min-height:72px;padding:0 16px;border-radius:8px;background:rgba(15,23,42,.70);border:1px solid rgba(255,255,255,.12);font-weight:850;text-align:center;line-height:1.15;white-space:normal}
+        [hidden]{display:none!important}
         .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.72);backdrop-filter:blur(8px);z-index:30}
-        .modal{position:fixed;top:3vh;left:max(18px,calc((100vw - 1060px)/2));right:max(18px,calc((100vw - 1060px)/2));max-height:94vh;z-index:40;overflow:auto;border-radius:24px;background:var(--iq-navy);border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.55);animation:rise .24s ease-out}
+        .modal{position:fixed;top:18px;bottom:18px;left:max(18px,calc((100vw - 1060px)/2));right:max(18px,calc((100vw - 1060px)/2));display:grid;grid-template-rows:auto minmax(0,1fr);z-index:40;overflow:hidden;border-radius:24px;background:var(--iq-navy);border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.55);animation:rise .24s ease-out}
         .modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;min-width:0;padding:22px 24px;background:rgba(23,32,43,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.12)}
         .modal-head>div:first-child{min-width:0}
         .modal-head-actions{display:flex;gap:8px;flex-shrink:0}
         .icon-btn{width:42px;min-height:42px;padding:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.10);color:var(--iq-white)}
-        .game-slot{padding:24px}
+        .game-slot{min-height:0;overflow:auto;overscroll-behavior:contain;padding:24px}
         .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.current-objective{margin-bottom:12px;color:rgba(243,244,246,.84);font-weight:850;line-height:1.35}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
         .round-head{display:grid;gap:6px;margin-bottom:20px}.round-head span{color:var(--iq-pink-light);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:0}.round-head p{color:var(--iq-muted);line-height:1.45}
         .round-task{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
@@ -1871,6 +1876,8 @@
         .candidate[data-placement-card]:focus-visible{outline:3px solid rgba(255,92,170,.55);outline-offset:4px}
         .candidate[data-placement-card].dragging{cursor:grabbing;border-color:var(--iq-pink-light);box-shadow:0 24px 48px rgba(255,26,136,.24)}
         .event-card[data-corrupt]{cursor:grab;touch-action:none;user-select:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease,opacity .12s ease}
+        .drag-cue{display:inline-flex;align-self:flex-start;padding:4px 7px;border-radius:999px;background:rgba(255,26,136,.14);color:var(--iq-pink-light);font-size:10px;font-weight:950;text-transform:uppercase}
+        .event-card[data-corrupt] .drag-cue{margin-bottom:2px}
         .event-card[data-corrupt]:focus-visible{outline:3px solid rgba(255,92,170,.55);outline-offset:4px}
         .event-card[data-corrupt].dragging{cursor:grabbing;border-color:var(--iq-pink-light);box-shadow:0 24px 48px rgba(255,26,136,.24)}
         .rift-shake{border-color:var(--iq-pink-light);animation:shake .42s ease}
@@ -1879,7 +1886,7 @@
         .rift-card{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}
         .micro{color:var(--iq-muted);margin-top:8px}
         .corrupt-drop{display:grid;gap:4px;width:min(100%,360px);margin:12px auto 0;padding:14px 16px;border-radius:16px;border:1px dashed rgba(255,92,170,.45);background:rgba(255,26,136,.08);color:var(--iq-muted);text-align:center;transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease}
-        .corrupt-drop b{color:var(--iq-pink-light);text-transform:uppercase;font-size:12px}
+        .corrupt-drop b{color:var(--iq-pink-light);text-transform:uppercase;font-size:12px}.corrupt-drop span{line-height:1.3}
         .corrupt-drop.drop-target{border-color:var(--iq-pink-light);box-shadow:0 0 30px rgba(255,26,136,.38);transform:scale(1.03);color:var(--iq-white)}
         .feedback,.reveal-card,.result,.boss-panel{border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:18px;margin-top:18px}
         .feedback.rift{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}
@@ -1889,7 +1896,7 @@
         .action-note{max-width:360px;color:rgba(243,244,246,.62);font-size:12px;line-height:1.35}
         .reveal-card{display:grid;gap:14px;max-width:720px;margin:12px auto;animation:rise .22s ease-out}.why{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,26,136,.10)}.source-row{display:flex;gap:10px;flex-wrap:wrap}.source-row a,.reading-path a{color:var(--iq-pink-light);font-weight:850;text-decoration:none}
         .tutorial-grid{display:grid;gap:2px}.term-row{display:grid;grid-template-columns:160px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.10)}.term-row:last-child{border-bottom:0}.term-row b{color:var(--iq-pink-light)}.term-row span{color:rgba(243,244,246,.82);line-height:1.45}
-        .boss-status{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.boss-tip{margin:0 0 14px;color:var(--iq-muted);font-size:13px;line-height:1.45}.boss-list{display:grid;gap:10px}.boss-row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--iq-blue);border:1px solid rgba(255,255,255,.12)}.boss-row.locked{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}.boss-row:not(.locked){cursor:grab;touch-action:none;user-select:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.boss-row:not(.locked):active,.boss-row.dragging{cursor:grabbing}.boss-row.dragging{position:relative;z-index:4;border-color:var(--iq-pink-light);box-shadow:0 18px 38px rgba(255,26,136,.20)}.boss-row.drop-target{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}.drag-handle{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);font-weight:900;font-size:13px;letter-spacing:0;cursor:grab}.drag-handle:active{cursor:grabbing}.boss-row.locked .drag-handle{cursor:default}.mobile-move{display:flex;gap:6px}.mobile-move button{min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--iq-white)}
+        .boss-status{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.boss-tip{margin:0 0 14px;color:var(--iq-muted);font-size:13px;line-height:1.45}.boss-list{display:grid;gap:10px}.boss-row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--iq-blue);border:1px solid rgba(255,255,255,.12)}.boss-row.locked{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}.boss-row:not(.locked){cursor:grab;touch-action:none;user-select:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.boss-row:not(.locked):active,.boss-row.dragging{cursor:grabbing}.boss-row.dragging{position:relative;z-index:4;border-color:var(--iq-pink-light);box-shadow:0 18px 38px rgba(255,26,136,.20)}.boss-row.drop-target{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}.drag-handle{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);font-weight:900;font-size:13px;letter-spacing:0;cursor:grab}.drag-handle:active{cursor:grabbing}.boss-row.locked .drag-handle{cursor:default}.mobile-move{display:flex;gap:6px}.mobile-move button{display:inline-flex;align-items:center;justify-content:center;text-align:center;min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--iq-white);line-height:1.1;white-space:normal}
         .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.result-note{margin:0}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
         .feature-path p,.feature-path span{color:rgba(250,252,248,.78)}.feature-path a{color:var(--iq-pink-light)}
         h1,h2,h3,p,.event-card,.candidate,.round-task,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:break-word}
@@ -1906,7 +1913,7 @@
           .timeline-board.dragging-placement .gap.armed,.gap.drop-target,.corrupt-drop.drop-target,.boss-row.dragging,.boss-row.drop-target{transform:none!important}
         }
         @media (max-width:760px){
-          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.round-task{grid-template-columns:1fr}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
+          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;border-radius:0}.game-slot{padding:18px}.round-task{grid-template-columns:1fr}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
         }
       `;
     }

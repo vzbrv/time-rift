@@ -812,10 +812,10 @@
       const attemptsUsed = Number(rs.bossAttempts || 0);
       const attemptsLeft = Math.max(0, this.rulesForDifficulty().bossAttempts - attemptsUsed);
       const canCheck = attemptsLeft > 0;
-      const checkLabel = canCheck ? `Check order (${attemptsLeft} left)` : "Use Anchor timeline below";
+      const checkLabel = canCheck ? `Check order (${attemptsLeft} left)` : "Use Anchor timeline";
       const tip = canCheck
         ? "Drag unlocked rows so the list runs earliest to latest. Earlier/Later buttons are fallback controls; Check order anchors correct rows and reveals dates."
-        : "Checks are used up. Use Anchor timeline below, or spend hints if you want more clues first.";
+        : "Checks are used up. Use Anchor timeline, or spend hints if you want more clues first.";
       return `
         <div class="boss-panel">
           <div class="boss-status">
@@ -829,7 +829,7 @@
               const isLocked = locked.has(id);
               const detail = isLocked ? this.formatDate(item) : `${String(index + 1).padStart(2, "0")} · ${item.era} · date hidden`;
               return `
-                <div class="boss-row ${isLocked ? "locked" : ""}" draggable="${!isLocked}" data-boss-id="${esc(id)}" tabindex="${isLocked ? "-1" : "0"}" role="listitem" aria-label="${esc(`${item.title} ${isLocked ? "anchored" : "drifting"}`)}">
+                <div class="boss-row ${isLocked ? "locked" : ""}" data-boss-id="${esc(id)}" tabindex="${isLocked ? "-1" : "0"}" role="listitem" aria-label="${esc(`${item.title} ${isLocked ? "anchored" : "drifting"}`)}">
                   <span class="drag-handle" title="${isLocked ? "Anchored" : "Drag to reorder"}" aria-hidden="true">${isLocked ? "✓" : "⋮⋮"}</span>
                   <div>
                     <strong>${esc(item.title)}</strong>
@@ -862,19 +862,29 @@
       const before = anchors[index - 1];
       const after = anchors[index];
       const hit = rift?.gap === index;
+      const slot = index + 1;
       const label = hit ? "Break" : before && after ? "Between" : before ? "After" : "Before";
-      const detail = hit ? "Wrong spot" : before && after ? `${before.title} / ${after.title}` : before ? before.title : after ? after.title : "Place here";
+      const detail = hit ? `Slot ${slot}` : before && after ? `Slot ${slot}` : before ? "After last" : after ? "Before first" : `Slot ${slot}`;
+      const context = hit
+        ? `Wrong slot ${slot}`
+        : before && after
+          ? `Between ${before.title} and ${after.title}`
+          : before
+            ? `After ${before.title}`
+            : after
+              ? `Before ${after.title}`
+              : `Slot ${slot}`;
       const aria = hit
-        ? `Wrong slot ${index + 1}`
+        ? `Wrong slot ${slot}`
         : before && after
           ? `Place event between ${before.title} and ${after.title}`
           : before
             ? `Place event after ${before.title}`
             : after
               ? `Place event before ${after.title}`
-              : `Place event in slot ${index + 1}`;
+              : `Place event in slot ${slot}`;
       return `
-        <button class="gap portal ${hit ? "rift-hit" : ""} ${armed ? "armed" : "disabled"}" data-gap="${index}" ${armed ? "" : "disabled"} aria-label="${esc(aria)}">
+        <button class="gap portal ${hit ? "rift-hit" : ""} ${armed ? "armed" : "disabled"}" data-gap="${index}" ${armed ? "" : "disabled"} aria-label="${esc(aria)}" title="${esc(context)}">
           <i></i><span>${esc(label)}</span><small>${esc(detail)}</small>
         </button>
       `;
@@ -1152,8 +1162,10 @@
         end = (endEvent) => {
           cleanup();
           const targetGap = dragging ? gapAt(endEvent.clientX, endEvent.clientY) : null;
+          const didDrag = dragging;
           finishDrag(event.pointerId);
           if (targetGap) this.submitPlacement(plan, Number(targetGap.dataset.gap));
+          else if (didDrag) this.showDropMiss(card, "Drop the event on a glowing timeline slot.");
         };
         cancel = () => {
           cleanup();
@@ -1170,6 +1182,17 @@
         event.preventDefault();
         gaps[0]?.focus();
       });
+    }
+
+    showDropMiss(element, message) {
+      this.liveMessage = message;
+      const live = this.shadowRoot.querySelector(".sr-only[aria-live]");
+      if (live) live.textContent = message;
+      if (!element) return;
+      element.classList.remove("drop-miss");
+      void element.offsetWidth;
+      element.classList.add("drop-miss");
+      window.setTimeout(() => element.classList.remove("drop-miss"), 450);
     }
 
     submitCorrupt(plan, id) {
@@ -1259,6 +1282,7 @@
         end = (endEvent) => {
           cleanup();
           const shouldSubmit = dragging && isOverDrop(endEvent.clientX, endEvent.clientY);
+          const didDrag = dragging;
           finishDrag(event.pointerId);
           if (shouldSubmit) {
             card.dataset.skipClick = "true";
@@ -1266,6 +1290,8 @@
               if (card.dataset.skipClick === "true") card.dataset.skipClick = "";
             }, 0);
             this.submitCorrupt(plan, card.dataset.corrupt);
+          } else if (didDrag) {
+            this.showDropMiss(drop, "Drop the drifting card on Rift check.");
           }
         };
         cancel = () => {
@@ -1285,15 +1311,7 @@
       });
       this.shadowRoot.querySelector("[data-submit-boss]")?.addEventListener("click", () => this.submitBoss());
       const rows = Array.from(this.shadowRoot.querySelectorAll("[data-boss-id]"));
-      rows.forEach((row) => {
-        row.addEventListener("dragstart", () => {
-          if (row.classList.contains("locked")) return;
-          this.dragId = row.dataset.bossId;
-        });
-        row.addEventListener("dragover", (event) => event.preventDefault());
-        row.addEventListener("drop", () => this.dropBoss(row.dataset.bossId));
-        this.bindBossPointerDrag(row, rows);
-      });
+      rows.forEach((row) => this.bindBossPointerDrag(row, rows));
     }
 
     bindBossPointerDrag(row, rows) {
@@ -1354,6 +1372,7 @@
         end = (endEvent) => {
           cleanup();
           const target = dragging ? rowAt(endEvent.clientX, endEvent.clientY) : null;
+          const didDrag = dragging;
           try {
             row.releasePointerCapture(event.pointerId);
           } catch {}
@@ -1361,6 +1380,8 @@
           if (target) {
             this.dragId = row.dataset.bossId;
             this.dropBoss(target.dataset.bossId);
+          } else if (didDrag) {
+            this.showDropMiss(row, "Drop the row on another unlocked row to reorder.");
           }
         };
         cancel = () => {
@@ -1853,6 +1874,7 @@
         .event-card[data-corrupt]:focus-visible{outline:3px solid rgba(255,92,170,.55);outline-offset:4px}
         .event-card[data-corrupt].dragging{cursor:grabbing;border-color:var(--iq-pink-light);box-shadow:0 24px 48px rgba(255,26,136,.24)}
         .rift-shake{border-color:var(--iq-pink-light);animation:shake .42s ease}
+        .drop-miss{border-color:var(--iq-pink-light)!important;animation:shake .42s ease;box-shadow:0 0 26px rgba(255,26,136,.28)!important}
         .connector{position:relative;z-index:1;min-width:30px;height:2px;background:rgba(255,92,170,.45)}
         .rift-card{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}
         .micro{color:var(--iq-muted);margin-top:8px}
@@ -1870,7 +1892,7 @@
         .boss-status{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.boss-tip{margin:0 0 14px;color:var(--iq-muted);font-size:13px;line-height:1.45}.boss-list{display:grid;gap:10px}.boss-row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--iq-blue);border:1px solid rgba(255,255,255,.12)}.boss-row.locked{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}.boss-row:not(.locked){cursor:grab;touch-action:none;user-select:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.boss-row:not(.locked):active,.boss-row.dragging{cursor:grabbing}.boss-row.dragging{position:relative;z-index:4;border-color:var(--iq-pink-light);box-shadow:0 18px 38px rgba(255,26,136,.20)}.boss-row.drop-target{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}.drag-handle{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);font-weight:900;font-size:13px;letter-spacing:0;cursor:grab}.drag-handle:active{cursor:grabbing}.boss-row.locked .drag-handle{cursor:default}.mobile-move{display:flex;gap:6px}.mobile-move button{min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--iq-white)}
         .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.result-note{margin:0}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
         .feature-path p,.feature-path span{color:rgba(250,252,248,.78)}.feature-path a{color:var(--iq-pink-light)}
-        h1,h2,h3,p,.event-card,.candidate,.round-task,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:anywhere}
+        h1,h2,h3,p,.event-card,.candidate,.round-task,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:break-word}
         .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
         @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
         @keyframes scan{from{transform:translateX(-1.2%)}to{transform:translateX(1.2%)}}

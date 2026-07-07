@@ -594,7 +594,7 @@
           <span class="eyebrow">How IQ Time Rift works</span>
           <h3>Restore the timeline before the break spreads.</h3>
           <div class="tutorial-grid">
-            <div class="term-row"><b>Timeline placement</b><span>Do not drag the card; tap the glowing slot where the shown event belongs.</span></div>
+            <div class="term-row"><b>Timeline placement</b><span>Drag the bottom event card onto the glowing slot where the shown event belongs.</span></div>
             <div class="term-row"><b>Corrupted timeline</b><span>One event card is out of order. Tap the card that breaks the chronology.</span></div>
             <div class="term-row"><b>Final restore</b><span>Grab the ⋮⋮ handle to drag rows, or use Earlier / Later, to put every event in order.</span></div>
             <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
@@ -690,7 +690,7 @@
     objectiveCopy(plan) {
       if (plan.type === "boss") return "Objective: move rows into earliest-to-latest order, then check the order.";
       if (plan.type === "corrupt") return "Objective: find the card that breaks the left-to-right timeline.";
-      return "Objective: tap the glowing slot where the event fits between the anchors.";
+      return "Objective: drag the event card onto the slot where it fits between the anchors.";
     }
 
     roundTaskMarkup(plan) {
@@ -712,7 +712,7 @@
       return `
         <div class="round-task">
           <span><b>Move</b> ${esc(target.title)}</span>
-          <span><b>Where</b> tap a glowing slot</span>
+          <span><b>Where</b> drag onto a glowing slot</span>
           <span><b>Check</b> left is earlier, right is later</span>
         </div>
       `;
@@ -721,8 +721,8 @@
     roundGuidance(plan) {
       if (plan.type === "boss") return "Correct rows anchor and reveal dates after each check; focus only on rows still drifting.";
       if (plan.type === "corrupt") return "Read the row left to right. The corrupted card is the one breaking chronology.";
-      if (plan.showAnchorYears === false) return "The exact year is hidden; use era tags and neighboring events before spending a hint.";
-      return "Use visible dates first, then place the hidden event in the matching slot.";
+      if (plan.showAnchorYears === false) return "The exact year is hidden; drag by era tags and neighboring events before spending a hint.";
+      return "Use visible dates first, then drag the hidden event onto the matching slot.";
     }
 
     starterClueMarkup(plan) {
@@ -767,11 +767,11 @@
           `).join("")}
           ${this.gapButton(anchors.length, rift, true, anchors)}
         </div>
-        <div class="candidate ${rift ? "rift-shake" : ""}" aria-live="polite">
+        <div class="candidate ${rift ? "rift-shake" : ""}" data-placement-card role="button" tabindex="0" aria-live="polite" aria-label="Drag this event card to a timeline slot">
           <b class="card-role">Place this event</b>
           <span>${esc(target.era)}</span>
           <strong>${esc(target.title)}</strong>
-          <small>${rift ? "That slot breaks order - choose another glowing slot." : "Tap Before, Between, or After above."}</small>
+          <small>${rift ? "That slot breaks order - drag this card to another slot." : "Drag this card onto Before, Between, or After."}</small>
         </div>
       `;
     }
@@ -1072,8 +1072,99 @@
     }
 
     bindPlace(plan) {
-      this.shadowRoot.querySelectorAll("[data-gap]").forEach((button) => {
+      const gaps = Array.from(this.shadowRoot.querySelectorAll("[data-gap]"));
+      const card = this.shadowRoot.querySelector("[data-placement-card]");
+      const board = this.shadowRoot.querySelector(".timeline-board.armed");
+      const clearDropState = () => {
+        card?.classList.remove("dragging");
+        board?.classList.remove("dragging-placement");
+        gaps.forEach((gap) => gap.classList.remove("drop-target"));
+      };
+
+      gaps.forEach((button) => {
         button.addEventListener("click", () => this.submitPlacement(plan, Number(button.dataset.gap)));
+      });
+      if (card) this.bindPlacementDrag(plan, card, board, gaps, clearDropState);
+    }
+
+    bindPlacementDrag(plan, card, board, gaps, clearDropState) {
+      let startX = 0;
+      let startY = 0;
+      let activeGap = null;
+      let dragging = false;
+
+      const resetCard = () => {
+        card.style.transform = "";
+        card.style.zIndex = "";
+      };
+      const gapAt = (x, y) => gaps.find((gap) => {
+        const rect = gap.getBoundingClientRect();
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      });
+      const setActiveGap = (gap) => {
+        if (gap === activeGap) return;
+        activeGap?.classList.remove("drop-target");
+        activeGap = gap;
+        activeGap?.classList.add("drop-target");
+      };
+      const finishDrag = (pointerId) => {
+        try {
+          card.releasePointerCapture(pointerId);
+        } catch {}
+        resetCard();
+        clearDropState();
+        activeGap = null;
+        dragging = false;
+      };
+
+      card.addEventListener("pointerdown", (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+        startX = event.clientX;
+        startY = event.clientY;
+        activeGap = null;
+        dragging = false;
+        card.setPointerCapture?.(event.pointerId);
+
+        const move = (moveEvent) => {
+          const dx = moveEvent.clientX - startX;
+          const dy = moveEvent.clientY - startY;
+          if (!dragging && Math.hypot(dx, dy) < 8) return;
+          dragging = true;
+          moveEvent.preventDefault();
+          card.classList.add("dragging");
+          board?.classList.add("dragging-placement");
+          card.style.transform = `translate(${dx}px, ${dy}px) scale(.98)`;
+          card.style.zIndex = "10";
+          setActiveGap(gapAt(moveEvent.clientX, moveEvent.clientY));
+        };
+
+        let end;
+        let cancel;
+        const cleanup = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", end);
+          window.removeEventListener("pointercancel", cancel);
+        };
+        end = (endEvent) => {
+          cleanup();
+          const targetGap = dragging ? gapAt(endEvent.clientX, endEvent.clientY) : null;
+          finishDrag(event.pointerId);
+          if (targetGap) this.submitPlacement(plan, Number(targetGap.dataset.gap));
+        };
+        cancel = () => {
+          cleanup();
+          finishDrag(event.pointerId);
+        };
+
+        window.addEventListener("pointermove", move, { passive: false });
+        window.addEventListener("pointerup", end);
+        window.addEventListener("pointercancel", cancel);
+      });
+
+      card.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        gaps[0]?.focus();
       });
     }
 
@@ -1553,6 +1644,7 @@
         .line-glow{position:absolute;left:24px;right:24px;top:50%;height:6px;background:linear-gradient(90deg,rgba(15,23,42,.74),var(--iq-pink) 18%,var(--iq-pink-light) 50%,var(--iq-pink) 82%,rgba(15,23,42,.74));box-shadow:0 0 24px rgba(255,26,136,.60);opacity:.86}
         .timeline-board:not(.armed) .line-glow{background:linear-gradient(90deg,rgba(15,23,42,.78),rgba(255,92,170,.42),rgba(15,23,42,.78));opacity:.58}
         .timeline-board.armed .gap{box-shadow:0 0 22px rgba(255,26,136,.24)}
+        .timeline-board.dragging-placement .gap.armed{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.42);transform:scale(1.04)}
         .timeline-board.cracked .line-glow{background:linear-gradient(90deg,var(--iq-pink),var(--iq-white) 38%,var(--iq-pink-light) 48%,var(--iq-pink) 58%,var(--iq-blue));animation:crack .45s ease 2}
         .event-card,.candidate{position:relative;z-index:1;display:grid;gap:7px;min-width:170px;padding:16px;border-radius:16px;background:var(--iq-blue);color:var(--iq-white);border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 28px rgba(0,0,0,.20);text-align:left}
         .event-card span,.candidate span{color:var(--iq-pink-light);font-size:12px;font-weight:850;text-transform:uppercase}.event-card small,.candidate small{color:rgba(243,244,246,.72)}
@@ -1561,7 +1653,11 @@
         .gap:not(.armed){border-color:rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,255,255,.08),rgba(23,32,43,.85));color:rgba(243,244,246,.62)}
         .gap i{width:28px;height:28px;border-radius:50%;border:2px solid var(--iq-pink-light);box-shadow:0 0 18px var(--iq-pink-light)}.gap span{font-size:11px;font-weight:900;text-transform:uppercase}.gap small{max-width:76px;font-size:10px;line-height:1.12;text-align:center;color:rgba(243,244,246,.62);font-weight:850}
         .gap.rift-hit{border-color:var(--iq-pink-light);background:radial-gradient(circle,rgba(255,26,136,.34),rgba(39,45,56,.9));box-shadow:0 0 28px rgba(255,26,136,.55)}
+        .gap.drop-target{color:var(--iq-white);background:radial-gradient(circle,rgba(255,92,170,.40),rgba(255,26,136,.20) 58%,rgba(23,32,43,.96));box-shadow:0 0 34px rgba(255,26,136,.62);transform:scale(1.08)}
         .candidate{width:min(100%,420px);margin:16px auto 0;border-color:rgba(255,92,170,.55);background:linear-gradient(135deg,var(--iq-blue),var(--iq-navy-dark))}
+        .candidate[data-placement-card]{cursor:grab;touch-action:none;user-select:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}
+        .candidate[data-placement-card]:focus-visible{outline:3px solid rgba(255,92,170,.55);outline-offset:4px}
+        .candidate[data-placement-card].dragging{cursor:grabbing;border-color:var(--iq-pink-light);box-shadow:0 24px 48px rgba(255,26,136,.24)}
         .rift-shake{border-color:var(--iq-pink-light);animation:shake .42s ease}
         .connector{position:relative;z-index:1;min-width:30px;height:2px;background:rgba(255,92,170,.45)}
         .rift-card{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}
@@ -1588,6 +1684,7 @@
           *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
           .ambient,.line-glow,.stability i,.blocks b,.gap i{box-shadow:none!important;filter:none!important;transform:none!important}
           .primary:hover,.secondary:hover,.ghost:hover,.event-card:hover,.candidate:hover,.gap:hover{transform:none!important}
+          .timeline-board.dragging-placement .gap.armed,.gap.drop-target{transform:none!important}
         }
         @media (max-width:760px){
           .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;max-height:none;border-radius:0}.game-slot{padding:18px}.round-task{grid-template-columns:1fr}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}

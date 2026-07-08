@@ -619,12 +619,11 @@
           <h3>Restore the timeline before the break spreads.</h3>
           <div class="tutorial-grid">
             <div class="term-row"><b>Timeline placement</b><span>Drag the bottom event card onto the glowing slot where the shown event belongs.</span></div>
-            <div class="term-row"><b>Broken timeline</b><span>One event card is out of order. Drop it on Check card, or tap it.</span></div>
+            <div class="term-row"><b>Broken timeline</b><span>One event card is out of order. Drop it on the rift check, or tap it.</span></div>
             <div class="term-row"><b>Final restore</b><span>Drag unlocked rows into earliest-to-latest order, or use Earlier / Later as fallback controls.</span></div>
             <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
             <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses, failed checks, or hints; once it unlocks, you can keep taking clues or reveal the answer.</span></div>
             <div class="term-row"><b>Difficulty</b><span>Easy / Medium / Hard changes how many misses or hints you get before reveal unlocks.</span></div>
-            <div class="term-row"><b>Stability</b><span>The share of today’s rounds you’ve restored so far.</span></div>
           </div>
           <button class="primary wide" data-tutorial-dismiss>Got it — start restoring</button>
         </article>
@@ -654,7 +653,7 @@
         .join("");
       return `
         <div class="rift-label">Timeline break map: ${esc(this.theme.title)}</div>
-        <div class="preview-count">${this.theme.events.length} events across ${this.theme.teaser.length} eras · ${this.totalRounds()} playable rounds · ${esc(this.difficultySummary())}</div>
+        <div class="preview-count">${this.theme.events.length} events across ${this.theme.teaser.length} eras</div>
         <div class="teaser-path">${this.theme.teaser.map((item) => `<span>${esc(item)}</span>`).join("<i></i>")}</div>
         <div class="schematic-rift" aria-hidden="true">
           <span class="axis"></span>
@@ -728,7 +727,7 @@
         <div class="round-task">
           <span><b>1 Scan</b> dates left to right</span>
           <span><b>2 Find</b> the date that jumps backward</span>
-          <span><b>3 Check</b> drop or tap that card</span>
+          <span><b>3 Check</b> drop or tap it</span>
         </div>
       `;
       const target = this.event(plan.target);
@@ -821,11 +820,10 @@
             }).join("")}
           </div>
           <div class="corrupt-drop" data-corrupt-drop>
-            <b>Check card</b>
-            <span>Drop one out-of-order card here</span>
+            <b>Rift check</b>
+            <span>Drop suspect card here</span>
           </div>
         </div>
-        <p class="micro">Tip: tapping a card also checks it.</p>
       `;
     }
 
@@ -839,9 +837,9 @@
       const attemptsUsed = Number(rs.bossAttempts || 0);
       const attemptsLeft = Math.max(0, this.rulesForDifficulty().bossAttempts - attemptsUsed);
       const canCheck = attemptsLeft > 0;
-      const checkLabel = canCheck ? `Check order (${attemptsLeft} left)` : "Use Anchor timeline";
+      const checkLabel = canCheck ? "Check order" : "Use Anchor timeline";
       const tip = canCheck
-        ? "Drag unlocked rows so the list runs earliest to latest. Earlier/Later buttons are fallback controls; Check order anchors correct rows and reveals dates."
+        ? "Drag unlocked rows so the list runs earliest to latest. Check order anchors correct rows and reveals dates."
         : "Checks are used up. Use Anchor timeline, or spend hints if you want more clues first.";
       return `
         <div class="boss-panel">

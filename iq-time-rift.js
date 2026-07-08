@@ -557,10 +557,10 @@
             <div class="hero-copy">
               <span class="eyebrow">IQ.wiki mini-game</span>
               <h1>Repair the Web3 timeline.</h1>
-              <p>Choose a wiki source set, order events, and fix timeline breaks using clues from IQ.wiki wiki pages.</p>
+              <p>Choose a wiki source set, order events, and fix events placed in the wrong spot using clues from IQ.wiki wiki pages.</p>
               <div class="quick-rules" aria-label="Quick game rules">
                 <span><b>1</b> Drag event cards onto glowing timeline targets.</span>
-                <span><b>2</b> In broken rounds, find the one card whose date is out of order.</span>
+                <span><b>2</b> In wrong-spot rounds, find the one card whose date is out of order.</span>
                 <span><b>3</b> Use hints for clues, or reveal after misses.</span>
               </div>
               <div class="hero-actions">
@@ -625,12 +625,12 @@
       return `
         <article class="reveal-card tutorial-card">
           <span class="eyebrow">How IQ Time Rift works</span>
-          <h3>Restore the timeline before the break spreads.</h3>
+          <h3>Restore the timeline by finding events in the wrong spot.</h3>
           <div class="tutorial-grid">
             <div class="term-row"><b>Timeline placement</b><span>Drag the bottom event card onto the glowing slot where the shown event belongs.</span></div>
-            <div class="term-row"><b>Broken timeline</b><span>One event card is out of order. Drop it on the rift check, or tap it.</span></div>
+            <div class="term-row"><b>Wrong-spot timeline</b><span>One event card is out of order. Drop it on the rift check, or tap it.</span></div>
             <div class="term-row"><b>Final restore</b><span>Drag unlocked rows into earliest-to-latest order, or use Earlier / Later as fallback controls.</span></div>
-            <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
+            <div class="term-row"><b>Wrong spot</b><span>A wrong guess marks an event as misplaced and lowers your final result quality.</span></div>
             <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses, failed checks, or hints; once it unlocks, you can keep taking clues or reveal the answer.</span></div>
             <div class="term-row"><b>Difficulty</b><span>Easy / Medium / Hard changes how many misses or hints you get before reveal unlocks.</span></div>
           </div>
@@ -661,7 +661,7 @@
         )
         .join("");
       return `
-        <div class="rift-label">Timeline break map: ${esc(this.theme.title)}</div>
+        <div class="rift-label">Wrong-spot map: ${esc(this.theme.title)}</div>
         <div class="preview-count">${this.theme.events.length} events across ${this.theme.teaser.length} eras</div>
         <div class="teaser-path">${this.theme.teaser.map((item) => `<span>${esc(item)}</span>`).join("<i></i>")}</div>
         <div class="schematic-rift" aria-hidden="true">
@@ -694,7 +694,7 @@
             ? this.revealMarkup()
             : `
               <div class="round-head">
-                <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Find the break" : "Timeline placement"}</span>
+                <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Find the wrong spot" : "Timeline placement"}</span>
                 <h3>${esc(this.roundTitle(plan))}</h3>
                 <p>${esc(this.roundGuidance(plan))}</p>
               </div>
@@ -746,7 +746,7 @@
           <b class="card-role">Place this event</b>
           <span>${esc(target.era)}</span>
           <strong>${esc(target.title)}</strong>
-          <small>${rift ? "That slot breaks order - drag this card to another slot." : "Drag this card onto Before, Between, or After."}</small>
+          <small>${rift ? "That is not where it belongs - drag this event to another slot." : "Drag this card onto Before, Between, or After."}</small>
         </div>
       `;
     }
@@ -760,7 +760,7 @@
             ${plan.anchors.map((id, index) => {
               const item = this.event(id);
               return `
-                <button class="event-card" data-corrupt="${esc(id)}" aria-label="${esc(`Check ${item.title} as the out-of-order card`)}">
+                <button class="event-card" data-corrupt="${esc(id)}" aria-label="${esc(`Check ${item.title} as the event that does not belong here`)}">
                   <strong>${esc(item.title)}</strong>
                 </button>
                 ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
@@ -768,8 +768,8 @@
             }).join("")}
           </div>
           <div class="corrupt-drop" data-corrupt-drop>
-            <b>Wrong card</b>
-            <span>Drop the out-of-order card here</span>
+            <b>Wrong spot</b>
+            <span>Drop the event that does not belong here</span>
           </div>
         </div>
       `;
@@ -836,10 +836,10 @@
       const after = anchors[index];
       const hit = rift?.gap === index;
       const slot = index + 1;
-      const label = hit ? "Break" : before && after ? "Between" : before ? "After" : "Before";
-      const detail = hit ? `Slot ${slot}` : before && after ? `Slot ${slot}` : before ? "After last" : after ? "Before first" : `Slot ${slot}`;
+      const label = hit ? "Wrong spot" : before && after ? "Between" : before ? "After" : "Before";
+      const detail = hit ? "Event does not belong there" : before && after ? `Slot ${slot}` : before ? "After last" : after ? "Before first" : `Slot ${slot}`;
       const context = hit
-        ? `Wrong slot ${slot}`
+        ? `Event does not belong in slot ${slot}`
         : before && after
           ? `Between ${before.title} and ${after.title}`
           : before
@@ -848,7 +848,7 @@
               ? `Before ${after.title}`
               : `Slot ${slot}`;
       const aria = hit
-        ? `Wrong slot ${slot}`
+        ? `Event does not belong in slot ${slot}`
         : before && after
           ? `Place event between ${before.title} and ${after.title}`
           : before
@@ -868,7 +868,7 @@
       if (!rs.lastRift && !rs.bossFeedback) return "";
       return `
         <div class="feedback ${rs.lastRift ? "rift" : ""}">
-          <strong>${rs.lastRift ? "Timeline break detected" : "Timeline feedback"}</strong>
+          <strong>${rs.lastRift ? "Wrong spot detected" : "Timeline feedback"}</strong>
           <p>${esc(rs.lastRift?.message || rs.bossFeedback)}</p>
         </div>
       `;
@@ -924,7 +924,7 @@
       const sources = (item.sources || []).slice(0, 2);
       return `
         <article class="reveal-card">
-          <span class="eyebrow">${reveal.revealed ? "Answer shown" : reveal.riftRepaired ? "Break repaired" : "Timeline stabilized"}</span>
+          <span class="eyebrow">${reveal.revealed ? "Answer shown" : reveal.riftRepaired ? "Wrong spot fixed" : "Timeline stabilized"}</span>
           <h3>${reveal.title || "Timeline stabilized."}</h3>
           <p><strong>${esc(item.title)}</strong> happened in ${esc(this.formatDate(item))}.</p>
           <p>${esc(reveal.explanation || item.shortWhy)}</p>
@@ -952,7 +952,7 @@
           <p>You repaired today’s wiki-sourced timeline: ${esc(this.theme.title)}.</p>
           <div class="result-grid">
             <span><b>${this.state.restoredRounds}/${totalRounds}</b>Rounds restored</span>
-            <span><b>${this.state.rifts}</b>Breaks repaired</span>
+            <span><b>${this.state.rifts}</b>Wrong spots fixed</span>
             <span><b>${this.state.hintsUsed}</b>Hints used</span>
           </div>
           ${this.resultQualityMarkup(label, totalRounds)}
@@ -1349,11 +1349,11 @@
       const expected = anchors.filter((anchor) => new Date(anchor.date) < new Date(target.date)).length;
       if (gap === expected) {
         const repaired = rs.rifts > 0;
-        this.solveRound(target, repaired ? "Break repaired." : "Timeline stabilized.", this.neighborExplanation(target.id), repaired);
+        this.solveRound(target, repaired ? "Wrong spot fixed." : "Timeline stabilized.", this.neighborExplanation(target.id), repaired);
         return;
       }
       const direction = gap < expected ? "later" : "earlier";
-      this.openRift(`Timeline break detected - this event belongs ${direction} in the timeline.`, { gap });
+      this.openRift(`Wrong spot detected - this event belongs ${direction} in the timeline.`, { gap });
     }
 
     openRift(message, detail = {}) {
@@ -1623,8 +1623,8 @@
     resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds) {
       const helped = helpedRounds ? `${helpedRounds} round${helpedRounds === 1 ? "" : "s"} used hints or reveal help` : "no rounds used hints or reveals";
       const revealed = revealedRounds ? `${revealedRounds} round${revealedRounds === 1 ? "" : "s"} used the revealed answer` : "no rounds were revealed";
-      const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} needed repaired breaks` : "no rounds needed repaired breaks";
-      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total breaks, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
+      const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} had wrong spots fixed` : "no rounds had wrong spots";
+      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total wrong spots, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
     }
 
     shareText() {
@@ -1639,7 +1639,7 @@
       return [
         `IQ Time Rift — ${this.theme.title}`,
         `${this.qualityLabel()}: ${this.state.restoredRounds}/${totalRounds} rounds`,
-        `Breaks repaired: ${this.state.rifts} · Hints: ${this.state.hintsUsed}`,
+        `Wrong spots fixed: ${this.state.rifts} · Hints: ${this.state.hintsUsed}`,
         markers.join(""),
         "https://iq.wiki",
       ].join("\n");

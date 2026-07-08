@@ -1616,15 +1616,15 @@
     resultQualityMarkup(label, totalRounds) {
       const helpedRounds = this.state.roundResults.filter((result) => result?.hintLevel > 0 || result?.revealed).length;
       const revealedRounds = this.state.roundResults.filter((result) => result?.revealed).length;
-      const breakRounds = this.state.roundResults.filter((result) => result?.rifts > 0).length;
-      return `<p class="story result-note">${esc(this.resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds))}</p>`;
+      const wrongSpotRounds = this.state.roundResults.filter((result) => result?.rifts > 0).length;
+      return `<p class="story result-note">${esc(this.resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, wrongSpotRounds))}</p>`;
     }
 
-    resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds) {
+    resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, wrongSpotRounds) {
       const helped = helpedRounds ? `${helpedRounds} round${helpedRounds === 1 ? "" : "s"} used hints or reveal help` : "no rounds used hints or reveals";
       const revealed = revealedRounds ? `${revealedRounds} round${revealedRounds === 1 ? "" : "s"} used the revealed answer` : "no rounds were revealed";
-      const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} had wrong spots fixed` : "no rounds had wrong spots";
-      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total wrong spots, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
+      const wrongSpots = wrongSpotRounds ? `${wrongSpotRounds} round${wrongSpotRounds === 1 ? "" : "s"} had wrong spots fixed` : "no rounds had wrong spots";
+      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total wrong spots, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${wrongSpots}.`;
     }
 
     shareText() {

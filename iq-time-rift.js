@@ -675,13 +675,12 @@
       if (this.state.completed || this.state.phase === "complete") return this.resultMarkup();
       const plan = this.currentPlan();
       const totalRounds = this.totalRounds();
-      const stability = Math.round((this.state.restoredRounds / totalRounds) * 100);
+      const restoredCount = this.state.restoredRounds;
       return `
         <div class="progress-block">
-          <div class="progress-copy"><strong>Score: ${stability}%</strong><span>Round ${this.state.roundIndex + 1}/${totalRounds}</span></div>
+          <div class="progress-copy"><strong>Rounds restored: ${restoredCount}/${totalRounds}</strong><span>Current round ${this.state.roundIndex + 1}/${totalRounds}</span></div>
           <p class="current-objective">${esc(this.objectiveCopy(plan))}</p>
-          <div class="stability"><i style="width:${stability}%"></i></div>
-          <div class="blocks" style="--round-count:${totalRounds}" aria-label="Round progress">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < this.state.restoredRounds ? "on" : ""}"></b>`).join("")}</div>
+          <div class="blocks" style="--round-count:${totalRounds}" aria-label="Rounds restored">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < restoredCount ? "on" : ""}"></b>`).join("")}</div>
         </div>
         ${
           this.state.phase === "revealing"
@@ -1898,7 +1897,7 @@
         .modal-head-actions{display:flex;gap:8px;flex-shrink:0}
         .icon-btn{width:42px;min-height:42px;padding:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.10);color:var(--iq-white)}
         .game-slot{min-height:0;overflow:auto;overscroll-behavior:contain;padding:24px}
-        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.current-objective{margin-bottom:12px;color:rgba(243,244,246,.84);font-weight:850;line-height:1.35}.stability{height:12px;border-radius:999px;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(39,45,56,.94));border:1px solid rgba(255,92,170,.30);overflow:hidden}.stability i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light) 72%,var(--iq-white));box-shadow:0 0 18px rgba(255,26,136,.78)}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
+        .progress-block{margin-bottom:22px}.progress-copy{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.current-objective{margin-bottom:12px;color:rgba(243,244,246,.84);font-weight:850;line-height:1.35}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
         .round-head{display:grid;gap:6px;margin-bottom:20px}.round-head span{color:var(--iq-pink-light);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:0}.round-head p{color:var(--iq-muted);line-height:1.45}
         .round-task{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
         .round-task span{display:grid;gap:3px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(243,244,246,.78);font-size:12px;line-height:1.35}
@@ -1960,7 +1959,7 @@
         @keyframes pop{from{transform:scale(.88);opacity:.2}to{transform:scale(1);opacity:1}}
         @media (prefers-reduced-motion: reduce){
           *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
-          .ambient,.line-glow,.stability i,.blocks b,.gap i{box-shadow:none!important;filter:none!important;transform:none!important}
+          .ambient,.line-glow,.blocks b,.gap i{box-shadow:none!important;filter:none!important;transform:none!important}
           .primary:hover,.secondary:hover,.ghost:hover,.event-card:hover,.candidate:hover,.gap:hover{transform:none!important}
           .timeline-board.dragging-placement .gap.armed,.gap.drop-target,.corrupt-drop.drop-target,.boss-row.dragging,.boss-row.drop-target{transform:none!important}
         }

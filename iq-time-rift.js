@@ -295,7 +295,7 @@
       story:
         "Stablecoins made crypto easier to price, trade, lend, and use, while major stress events showed why design and collateral matter.",
       events: [
-        event("tether-launch", "Tether launches", "2014-10-06", "Dollar Tokens", "tether", "Tether helped popularize blockchain-issued dollar tokens for crypto markets.", "This came before Ethereum-native stablecoin experiments.", { yearLabel: "Oct 2014" }),
+        event("tether-launch", "Tether launches", "2014-11-20", "Dollar Tokens", "tether", "Tether's rename from Realcoin helped popularize blockchain-issued dollar tokens for crypto markets.", "This came before Ethereum-native stablecoin experiments.", { yearLabel: "Nov 2014" }),
         event("ethereum-mainnet", "Ethereum mainnet", "2015-07-30", "Smart Contract Era", "ethereum", "Ethereum made programmable stablecoin contracts broadly possible.", "This had to happen before DAI and many tokenized dollars."),
         event("dai-launch", "DAI launches", "2017-12-18", "On-chain Credit", "dai", "DAI showed that a decentralized stablecoin could be created and governed on-chain.", "This needed Ethereum smart contracts first.", { yearLabel: "Dec 2017" }),
         event("usdc-launch", "USDC launches", "2018-09-26", "Regulated Dollar Tokens", "usd-coin-usdc", "USDC became a major fiat-backed stablecoin used across exchanges, wallets, and DeFi.", "This followed early stablecoin demand and Ethereum token standards.", { yearLabel: "Sep 2018" }),
@@ -313,11 +313,11 @@
         "NFTs grew from early Ethereum collectibles into marketplaces, games, sports moments, and avatar communities.",
       events: [
         event("ethereum-mainnet", "Ethereum mainnet", "2015-07-30", "Smart Contract Era", "ethereum", "Ethereum made programmable collectibles and NFT marketplaces broadly possible.", "This is the base layer before the later NFT projects."),
-        event("cryptopunks-launch", "CryptoPunks launches", "2017-06-23", "Collectibles", "cryptopunks", "CryptoPunks became one of the most influential early NFT collectible projects.", "This came before the wider marketplace and avatar boom.", { yearLabel: "Jun 2017" }),
+        event("cryptopunks-launch", "CryptoPunks launches", "2017-06-01", "Collectibles", "cryptopunks", "CryptoPunks became one of the most influential early NFT collectible projects.", "This came before the wider marketplace and avatar boom.", { yearLabel: "Jun 2017", datePrecision: "month" }),
         event("opensea-launch", "OpenSea launches", "2017-12-20", "NFT Marketplaces", "opensea", "OpenSea helped make NFT discovery and trading more accessible.", "This followed the first wave of Ethereum collectibles.", { yearLabel: "late 2017", datePrecision: "approximate" }),
         event("axie-launch", "Axie Infinity launches", "2018-03-01", "Play-to-Earn", "axie-infinity", "Axie Infinity helped connect NFTs with games, economies, and digital ownership.", "This came after the earliest Ethereum collectibles.", { yearLabel: "Mar 2018", datePrecision: "month" }),
         event("nba-top-shot", "NBA Top Shot rises", "2020-10-01", "Mainstream NFTs", "nba-top-shot", "NBA Top Shot introduced many mainstream sports fans to NFT collectibles.", "This came before the 2021 avatar collection surge.", { yearLabel: "late 2020", datePrecision: "approximate" }),
-        event("bayc-mint", "Bored Ape Yacht Club mints", "2021-04-23", "Avatar Boom", "bored-ape-yacht-club", "BAYC became a symbol of the 2021 NFT avatar and community boom.", "This belongs after earlier marketplaces and mainstream collectible experiments.", { yearLabel: "Apr 2021" }),
+        event("bayc-mint", "Bored Ape Yacht Club mints", "2021-04-01", "Avatar Boom", "bored-ape-yacht-club", "BAYC became a symbol of the 2021 NFT avatar and community boom.", "This belongs after earlier marketplaces and mainstream collectible experiments.", { yearLabel: "Apr 2021", datePrecision: "month" }),
         event("blur-launch", "Blur launches", "2022-10-19", "NFT Trading", "blur", "Blur pushed NFT trading toward faster, more professional marketplace mechanics.", "This is later than the 2021 avatar boom.", { yearLabel: "Oct 2022" }),
       ],
     },
@@ -330,7 +330,7 @@
         "Ethereum scaling moved from early sidechain relief to rollups, public L2 networks, and protocol support for cheaper rollup data.",
       events: [
         event("ethereum-mainnet", "Ethereum mainnet", "2015-07-30", "Base Layer", "ethereum", "Ethereum created the settlement layer that later scaling systems extended.", "This is the starting point for Ethereum scaling."),
-        event("polygon-pos", "Polygon PoS mainnet", "2020-05-30", "Sidechains", "polygon", "Polygon PoS gave Ethereum users a cheaper execution environment before rollups matured.", "This came after Ethereum mainnet and before the L2 boom.", { yearLabel: "May 2020", datePrecision: "month" }),
+        event("polygon-pos", "Polygon PoS mainnet", "2020-06-01", "Sidechains", "polygon", "Polygon PoS gave Ethereum users a cheaper execution environment before rollups matured.", "This came after Ethereum mainnet and before the L2 boom.", { yearLabel: "Jun 2020", datePrecision: "month" }),
         event("arbitrum-one", "Arbitrum One opens", "2021-08-31", "Optimistic Rollups", "arbitrum", "Arbitrum One became a major optimistic rollup ecosystem for Ethereum applications.", "This belongs after earlier scaling networks and before later zkEVM launches.", { yearLabel: "Aug 2021" }),
         event("optimism-mainnet", "Optimism mainnet opens", "2021-12-16", "Optimistic Rollups", "optimism", "Optimism helped establish rollups as a central Ethereum scaling path.", "This sits in the same rollup wave as Arbitrum.", { yearLabel: "Dec 2021", datePrecision: "month" }),
         event("polygon-zkevm", "Polygon zkEVM launches", "2023-03-27", "ZK Rollups", "polygon-zkevm", "Polygon zkEVM brought EVM-compatible zero-knowledge scaling into public use.", "This came before Base and before Ethereum's blob upgrade.", { yearLabel: "Mar 2023" }),

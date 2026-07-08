@@ -407,10 +407,21 @@
       this.modalOpener = null;
       this.tutorialSeen = readStorage(TUTORIAL_KEY) === "1";
       this.showTutorial = !this.tutorialSeen;
+      this.handleKeydown = (event) => this.handleKeys(event);
+      this.keyHandlerBound = false;
     }
 
     connectedCallback() {
+      if (!this.keyHandlerBound) {
+        this.shadowRoot.addEventListener("keydown", this.handleKeydown);
+        this.keyHandlerBound = true;
+      }
       this.render();
+    }
+
+    disconnectedCallback() {
+      this.shadowRoot.removeEventListener("keydown", this.handleKeydown);
+      this.keyHandlerBound = false;
     }
 
     loadState() {
@@ -424,22 +435,35 @@
     }
 
     normalizeState(state) {
+      const themeId = themes.some((theme) => theme.id === state.themeId) ? state.themeId : DAILY_THEME_ID;
+      const totalRounds = (roundPlans[themeId] || roundPlans["road-to-defi"]).length;
+      const roundIndex = this.clampWholeNumber(state.roundIndex, 0, Math.max(0, totalRounds - 1));
+      const completed = Boolean(state.completed);
+      const pendingReveal = state.pendingReveal && typeof state.pendingReveal === "object" ? state.pendingReveal : null;
+      const phase = completed ? "complete" : state.phase === "revealing" && pendingReveal ? "revealing" : "playing";
+      const roundState = state.roundState && typeof state.roundState === "object" && !Array.isArray(state.roundState) ? state.roundState : {};
       return {
-        themeId: state.themeId || DAILY_THEME_ID,
-        roundIndex: Number(state.roundIndex || 0),
-        phase: state.phase || (state.completed ? "complete" : "playing"),
-        restoredRounds: Number(state.restoredRounds ?? state.restoredEvents ?? 0),
+        themeId,
+        roundIndex,
+        phase,
+        restoredRounds: this.clampWholeNumber(state.restoredRounds ?? state.restoredEvents, 0, totalRounds),
         difficulty: difficultyRules[state.difficulty] ? state.difficulty : null,
-        rifts: Number(state.rifts || 0),
-        hintsUsed: Number(state.hintsUsed || 0),
-        revealsUsed: Number(state.revealsUsed || 0),
-        completed: Boolean(state.completed),
-        roundResults: Array.isArray(state.roundResults) ? state.roundResults : [],
-        roundState: state.roundState || {},
-        pendingReveal: state.pendingReveal || null,
+        rifts: this.clampWholeNumber(state.rifts, 0),
+        hintsUsed: this.clampWholeNumber(state.hintsUsed, 0),
+        revealsUsed: this.clampWholeNumber(state.revealsUsed, 0),
+        completed,
+        roundResults: Array.isArray(state.roundResults) ? state.roundResults.slice(0, totalRounds) : [],
+        roundState,
+        pendingReveal,
         bossOrder: Array.isArray(state.bossOrder) ? state.bossOrder : null,
         shareOpen: Boolean(state.shareOpen),
       };
+    }
+
+    clampWholeNumber(value, min, max = Number.POSITIVE_INFINITY) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return min;
+      return Math.min(max, Math.max(min, Math.trunc(number)));
     }
 
     newState(themeId, difficulty) {
@@ -1065,7 +1089,6 @@
           this.openModal();
         });
       });
-      this.shadowRoot.addEventListener("keydown", (event) => this.handleKeys(event));
       this.bindGame();
     }
 
@@ -1593,6 +1616,11 @@
 
     submitBoss() {
       const rs = this.roundState();
+      const correct = this.orderedEvents().map((item) => item.id);
+      if (this.state.bossOrder.every((id, index) => id === correct[index])) {
+        this.solveRound(correct.map((id) => this.event(id))[0], "Final timeline stabilized.", "Every event is anchored from earliest to latest.", rs.rifts > 0);
+        return;
+      }
       if (Number(rs.bossAttempts || 0) >= this.rulesForDifficulty().bossAttempts) {
         rs.bossFeedback = "Checks are used up. Use Anchor timeline when you are ready.";
         this.liveMessage = rs.bossFeedback;
@@ -1601,7 +1629,6 @@
         this.openModal();
         return;
       }
-      const correct = this.orderedEvents().map((item) => item.id);
       const lockedIds = new Set(rs.bossLockedIds);
       const previousLocked = lockedIds.size;
       this.state.bossOrder.forEach((id, index) => {

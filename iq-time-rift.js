@@ -560,7 +560,7 @@
               <p>Choose a wiki source set, order events, and fix timeline breaks using clues from IQ.wiki wiki pages.</p>
               <div class="quick-rules" aria-label="Quick game rules">
                 <span><b>1</b> Drag event cards onto glowing timeline targets.</span>
-                <span><b>2</b> In corrupted rounds, drag the suspect card into the rift check.</span>
+                <span><b>2</b> In broken rounds, find the one card whose date is out of order.</span>
                 <span><b>3</b> Use hints for clues, or reveal after misses.</span>
               </div>
               <div class="hero-actions">
@@ -619,7 +619,7 @@
           <h3>Restore the timeline before the break spreads.</h3>
           <div class="tutorial-grid">
             <div class="term-row"><b>Timeline placement</b><span>Drag the bottom event card onto the glowing slot where the shown event belongs.</span></div>
-            <div class="term-row"><b>Corrupted timeline</b><span>One event card is out of order. Drag the suspect card into the rift check.</span></div>
+            <div class="term-row"><b>Broken timeline</b><span>One event card is out of order. Drop it on Check card, or tap it.</span></div>
             <div class="term-row"><b>Final restore</b><span>Drag unlocked rows into earliest-to-latest order, or use Earlier / Later as fallback controls.</span></div>
             <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
             <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses, failed checks, or hints; once it unlocks, you can keep taking clues or reveal the answer.</span></div>
@@ -688,7 +688,7 @@
             ? this.revealMarkup()
             : `
               <div class="round-head">
-                <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Corrupted timeline" : "Timeline placement"}</span>
+                <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Find the break" : "Timeline placement"}</span>
                 <h3>${esc(this.roundTitle(plan))}</h3>
                 <p>${esc(this.roundGuidance(plan))}</p>
                 ${this.roundTaskMarkup(plan)}
@@ -707,13 +707,13 @@
 
     roundTitle(plan) {
       if (plan.type === "boss") return "Drag rows until the timeline reads earliest to latest.";
-      if (plan.type === "corrupt") return "Drag the card that breaks the timeline into the rift check.";
+      if (plan.type === "corrupt") return "Find the one card out of order.";
       return "Move the event card into one timeline slot.";
     }
 
     objectiveCopy(plan) {
       if (plan.type === "boss") return "Objective: drag rows into earliest-to-latest order, then check the order.";
-      if (plan.type === "corrupt") return "Objective: drag the card that breaks the left-to-right timeline into the rift check.";
+      if (plan.type === "corrupt") return "Objective: find the event that does not fit left to right.";
       return "Objective: drag the event card onto the slot where it fits between the anchors.";
     }
 
@@ -727,9 +727,9 @@
       `;
       if (plan.type === "corrupt") return `
         <div class="round-task">
-          <span><b>Find</b> the suspect card</span>
-          <span><b>Action</b> drag it to rift check</span>
-          <span><b>Fallback</b> tap the card also works</span>
+          <span><b>1 Scan</b> dates left to right</span>
+          <span><b>2 Find</b> the date that jumps backward</span>
+          <span><b>3 Check</b> drop or tap that card</span>
         </div>
       `;
       const target = this.event(plan.target);
@@ -744,7 +744,7 @@
 
     roundGuidance(plan) {
       if (plan.type === "boss") return "Correct rows anchor and reveal dates after each check; drag only rows still drifting.";
-      if (plan.type === "corrupt") return "Read the row left to right. Drag the card whose date no longer fits into the rift check.";
+      if (plan.type === "corrupt") return "Dates should increase from left to right. Pick the one card that breaks the order.";
       if (plan.showAnchorYears === false) return "The exact year is hidden; drag by era tags and neighboring events before spending a hint.";
       return "Use visible dates first, then drag the hidden event onto the matching slot.";
     }
@@ -760,7 +760,7 @@
 
     freeClueCopy(plan, target) {
       if (plan.type === "boss") return "Start by moving rows with visible date clues near their chronological neighbors.";
-      if (plan.type === "corrupt") return "The suspect card is the one whose real date neighbors are not beside it.";
+      if (plan.type === "corrupt") return "Look for the card whose date belongs between different neighbors.";
       const anchors = plan.anchors.map((id) => this.event(id)).sort((a, b) => new Date(a.date) - new Date(b.date));
       const before = anchors.filter((item) => new Date(item.date) < new Date(target.date));
       const previous = before[before.length - 1];
@@ -803,27 +803,30 @@
     corruptMarkup(plan) {
       const rift = this.roundState().lastRift;
       return `
-        <div class="timeline-board corrupt ${rift ? "cracked" : ""}">
-          <div class="line-glow"></div>
-          ${plan.anchors.map((id, index) => {
-            const item = this.event(id);
-            const misplaced = id === plan.misplaced;
-            return `
-              <button class="event-card ${misplaced && rift ? "rift-card" : ""}" data-corrupt="${esc(id)}" aria-label="${esc(`Drag ${item.title} to the rift check if it breaks the timeline order`)}">
-                <b class="drag-cue">Drag to test</b>
-                <span>${esc(item.era)}</span>
-                <strong>${esc(item.title)}</strong>
-                <small>${misplaced && rift ? "Correct - out-of-order card" : "Drag to rift check if this breaks order"}</small>
-              </button>
-              ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
-            `;
-          }).join("")}
+        <div class="corrupt-play">
+          <div class="timeline-board corrupt ${rift ? "cracked" : ""}">
+            <div class="line-glow"></div>
+            ${plan.anchors.map((id, index) => {
+              const item = this.event(id);
+              const misplaced = id === plan.misplaced;
+              const dateLabel = this.formatDate(item);
+              return `
+                <button class="event-card ${misplaced && rift ? "rift-card" : ""}" data-corrupt="${esc(id)}" aria-label="${esc(`Check ${item.title} as the out-of-order card`)}">
+                  <b class="drag-cue">${misplaced && rift ? "Found" : "Check this?"}</b>
+                  <span>${esc(item.era)}</span>
+                  <strong>${esc(item.title)}</strong>
+                  <small>${misplaced && rift ? "Correct - this date is out of order" : `Date: ${esc(dateLabel)}`}</small>
+                </button>
+                ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
+              `;
+            }).join("")}
+          </div>
+          <div class="corrupt-drop" data-corrupt-drop>
+            <b>Check card</b>
+            <span>Drop one out-of-order card here</span>
+          </div>
         </div>
-        <div class="corrupt-drop" data-corrupt-drop>
-          <b>Rift check</b>
-          <span>Drop the suspect card here</span>
-        </div>
-        <p class="micro">Drag the suspect card into the rift check. You can still tap a card to check it.</p>
+        <p class="micro">Tip: tapping a card also checks it.</p>
       `;
     }
 
@@ -1911,9 +1914,11 @@
         .drop-miss{border-color:var(--iq-pink-light)!important;animation:shake .42s ease;box-shadow:0 0 26px rgba(255,26,136,.28)!important}
         .connector{position:relative;z-index:1;min-width:30px;height:2px;background:rgba(255,92,170,.45)}
         .rift-card{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}
+        .corrupt-play{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,240px);gap:12px;align-items:stretch;margin:18px 0}
+        .corrupt-play .timeline-board{margin:0}
         .micro{color:var(--iq-muted);margin-top:8px}
-        .corrupt-drop{display:grid;gap:4px;width:min(100%,360px);margin:12px auto 0;padding:14px 16px;border-radius:16px;border:1px dashed rgba(255,92,170,.45);background:rgba(255,26,136,.08);color:var(--iq-muted);text-align:center;transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease}
-        .corrupt-drop b{color:var(--iq-pink-light);text-transform:uppercase;font-size:12px}.corrupt-drop span{line-height:1.3}
+        .corrupt-drop{display:grid;place-content:center;gap:6px;min-height:190px;width:auto;margin:0;padding:16px;border-radius:16px;border:1px dashed rgba(255,92,170,.45);background:rgba(255,26,136,.08);color:var(--iq-muted);text-align:center;transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease}
+        .corrupt-drop b{color:var(--iq-pink-light);text-transform:uppercase;font-size:12px}.corrupt-drop span{max-width:180px;line-height:1.3}
         .corrupt-drop.drop-target{border-color:var(--iq-pink-light);box-shadow:0 0 30px rgba(255,26,136,.38);transform:scale(1.03);color:var(--iq-white)}
         .feedback,.reveal-card,.result,.boss-panel{border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:18px;margin-top:18px}
         .feedback.rift{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}
@@ -1940,7 +1945,7 @@
           .timeline-board.dragging-placement .gap.armed,.gap.drop-target,.corrupt-drop.drop-target,.boss-row.dragging,.boss-row.drop-target{transform:none!important}
         }
         @media (max-width:760px){
-          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;border-radius:0}.game-slot{padding:18px}.round-task{grid-template-columns:1fr}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
+          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;border-radius:0}.game-slot{padding:18px}.round-task{grid-template-columns:1fr}.corrupt-play{grid-template-columns:1fr}.corrupt-drop{min-height:auto;order:-1}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
         }
       `;
     }

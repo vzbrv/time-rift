@@ -608,7 +608,16 @@
       return `
         <span class="eyebrow">${esc(featurePath?.label || WIKI_SOURCE_LABEL)}</span>
         <h2 id="rift-title">${esc(this.theme.title)}</h2>
-        ${featurePath ? this.featurePathMarkup(featurePath) : ""}
+        ${featurePath ? this.featureSourceMarkup(featurePath) : ""}
+      `;
+    }
+
+    featureSourceMarkup(path) {
+      return `
+        <div class="feature-source">
+          <span>${esc(path.title || path.label || "IQ.wiki")}</span>
+          ${path.ctaUrl ? `<a href="${safeUrl(path.ctaUrl)}" target="_blank" rel="noreferrer">${esc(path.ctaText || "Explore on IQ.wiki")}</a>` : ""}
+        </div>
       `;
     }
 
@@ -677,8 +686,8 @@
       const restoredCount = this.state.restoredRounds;
       return `
         <div class="progress-block">
-          <div class="progress-copy"><strong>Round ${this.state.roundIndex + 1}/${totalRounds}</strong><span>${restoredCount} restored</span></div>
-          <div class="blocks" style="--round-count:${totalRounds}" aria-label="Rounds restored">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < restoredCount ? "on" : ""}"></b>`).join("")}</div>
+          <div class="progress-copy"><strong>Round ${this.state.roundIndex + 1}/${totalRounds}</strong><span>${restoredCount} complete</span></div>
+          <div class="blocks" style="--round-count:${totalRounds}" aria-label="Rounds complete">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < restoredCount ? "on" : ""}"></b>`).join("")}</div>
         </div>
         ${
           this.state.phase === "revealing"
@@ -688,8 +697,6 @@
                 <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Find the break" : "Timeline placement"}</span>
                 <h3>${esc(this.roundTitle(plan))}</h3>
                 <p>${esc(this.roundGuidance(plan))}</p>
-                ${this.roundTaskMarkup(plan)}
-                ${this.starterClueMarkup(plan)}
               </div>
               ${this.roundMarkup(plan)}
               ${this.feedbackMarkup()}
@@ -708,40 +715,11 @@
       return "Move the event card into one timeline slot.";
     }
 
-    roundTaskMarkup(plan) {
-      if (plan.type === "boss") return '<p class="round-task-line">Move unlocked rows; earliest belongs at the top.</p>';
-      if (plan.type === "corrupt") return '<p class="round-task-line">Scan the dates, then tap or drop the card that breaks the order.</p>';
-      const target = this.event(plan.target);
-      return `<p class="round-task-line">Place ${esc(target.title)} where both neighbors stay in date order.</p>`;
-    }
-
     roundGuidance(plan) {
-      if (plan.type === "boss") return "Correct rows anchor and reveal dates after each check; drag only rows still drifting.";
-      if (plan.type === "corrupt") return "Dates should increase from left to right. Pick the one card that breaks the order.";
-      if (plan.showAnchorYears === false) return "The exact year is hidden; drag by era tags and neighboring events before spending a hint.";
-      return "Use visible dates first, then drag the hidden event onto the matching slot.";
-    }
-
-    starterClueMarkup(plan) {
-      const rs = this.roundState();
-      if (this.state.roundIndex !== 0 || rs.hintLevel > 0 || rs.attempts > 0 || rs.rifts > 0 || rs.solved) return "";
-      const target = this.hintTarget(plan);
-      const clue = this.freeClueCopy(plan, target);
-      if (!clue) return "";
-      return `<p class="free-clue"><b>Free clue</b> ${esc(clue)}</p>`;
-    }
-
-    freeClueCopy(plan, target) {
-      if (plan.type === "boss") return "Start by moving rows with visible date clues near their chronological neighbors.";
-      if (plan.type === "corrupt") return "Look for the card whose date belongs between different neighbors.";
-      const anchors = plan.anchors.map((id) => this.event(id)).sort((a, b) => new Date(a.date) - new Date(b.date));
-      const before = anchors.filter((item) => new Date(item.date) < new Date(target.date));
-      const previous = before[before.length - 1];
-      const next = anchors.find((item) => new Date(item.date) > new Date(target.date));
-      if (previous && next) return `${target.title} fits after ${previous.title} and before ${next.title}.`;
-      if (previous) return `${target.title} fits after ${previous.title}.`;
-      if (next) return `${target.title} fits before ${next.title}.`;
-      return target.dependencyHint || target.shortWhy;
+      if (plan.type === "boss") return "Move unlocked rows into earliest-to-latest order, then check.";
+      if (plan.type === "corrupt") return "Read dates left to right, then tap or drop the one card out of order.";
+      const target = this.event(plan.target);
+      return `Place ${target.title} where both neighbors stay in date order.`;
     }
 
     roundMarkup(plan) {
@@ -795,8 +773,8 @@
             }).join("")}
           </div>
           <div class="corrupt-drop" data-corrupt-drop>
-            <b>Rift check</b>
-            <span>Drop suspect card here</span>
+            <b>Wrong card</b>
+            <span>Drop the out-of-order card here</span>
           </div>
         </div>
       `;
@@ -812,25 +790,25 @@
       const attemptsUsed = Number(rs.bossAttempts || 0);
       const attemptsLeft = Math.max(0, this.rulesForDifficulty().bossAttempts - attemptsUsed);
       const canCheck = attemptsLeft > 0;
-      const checkLabel = canCheck ? "Check order" : "Use Anchor timeline";
+      const checkLabel = canCheck ? "Check order" : "Show order";
       const tip = canCheck
-        ? "Drag unlocked rows so the list runs earliest to latest. Check order anchors correct rows and reveals dates."
-        : "Checks are used up. Use Anchor timeline, or spend hints if you want more clues first.";
+        ? "Move unlocked rows into earliest-to-latest order, then check."
+        : "Checks are used up. Show the order when ready.";
       return `
         <div class="boss-panel">
           <div class="boss-status">
-            <strong>${locked.size}/${this.theme.events.length} anchored</strong>
-            <span>${attemptsLeft ? `${attemptsLeft} checks left` : "Anchor timeline available"}</span>
+            <strong>${locked.size}/${this.theme.events.length} correctly placed</strong>
+            <span>${attemptsLeft ? `${attemptsLeft} checks remaining` : "Show order available"}</span>
           </div>
           <p class="boss-tip">${tip}</p>
           <div class="boss-list" role="list">
             ${this.state.bossOrder.map((id, index) => {
               const item = this.event(id);
               const isLocked = locked.has(id);
-              const detail = isLocked ? this.formatDate(item) : `${String(index + 1).padStart(2, "0")} · ${item.era} · date hidden`;
+              const detail = isLocked ? `${item.era} · ${this.formatDate(item)}` : item.era;
               return `
-                <div class="boss-row ${isLocked ? "locked" : ""}" data-boss-id="${esc(id)}" tabindex="${isLocked ? "-1" : "0"}" role="listitem" aria-label="${esc(`${item.title} ${isLocked ? "anchored" : "drifting"}`)}">
-                  <span class="drag-handle" title="${isLocked ? "Anchored" : "Drag to reorder"}" aria-hidden="true">${isLocked ? "✓" : "⋮⋮"}</span>
+                <div class="boss-row ${isLocked ? "locked" : ""}" data-boss-id="${esc(id)}" tabindex="${isLocked ? "-1" : "0"}" role="listitem" aria-label="${esc(`${item.title} ${isLocked ? "correctly placed" : "movable"}`)}">
+                  <span class="drag-handle" title="${isLocked ? "Correctly placed" : "Drag to reorder"}" aria-hidden="true">${isLocked ? "✓" : "⋮⋮"}</span>
                   <div>
                     <strong>${esc(item.title)}</strong>
                     <small>${esc(detail)}</small>
@@ -925,28 +903,6 @@
       return this.event(plan.type === "corrupt" ? plan.misplaced : plan.target);
     }
 
-    countPhrase(count, singular, plural = `${singular}s`) {
-      if (count <= 0) return "";
-      return `${count} more ${count === 1 ? singular : plural}`;
-    }
-
-    revealUnlockNeedCopy(plan, hintLimit = this.hintsFor(plan, this.hintTarget(plan)).length) {
-      const rs = this.roundState();
-      const rules = this.rulesForDifficulty();
-      const revealAt = Math.min(rules.hintsBeforeReveal, hintLimit);
-      const hintsLeft = Math.max(0, revealAt - Number(rs.hintLevel || 0));
-      const attemptsUsed = plan.type === "boss" ? Number(rs.bossAttempts || 0) : Number(rs.attempts || 0);
-      const attemptsNeeded = plan.type === "boss" ? rules.bossAttempts : rules.revealAfterAttempts;
-      const attemptsLeft = Math.max(0, attemptsNeeded - attemptsUsed);
-      const parts = [
-        this.countPhrase(hintsLeft, "hint"),
-        plan.type === "boss"
-          ? this.countPhrase(attemptsLeft, "failed check")
-          : this.countPhrase(attemptsLeft, "miss", "misses"),
-      ].filter(Boolean);
-      return parts.length ? parts.join(" or ") : "no more hints or misses";
-    }
-
     canReveal(plan) {
       const rs = this.roundState();
       const rules = this.rulesForDifficulty();
@@ -956,15 +912,12 @@
     }
 
     revealButtonMarkup(plan) {
-      const canReveal = this.canReveal(plan);
-      const label = plan.type === "boss" ? "Anchor timeline" : "Reveal placement";
-      const note = canReveal
-        ? "Reveal available; lowers result quality."
-        : `${this.revealUnlockNeedCopy(plan)} to unlock reveal.`;
+      if (!this.canReveal(plan)) return "";
+      const label = plan.type === "boss" ? "Show order" : "Show placement";
       return `
         <div class="reveal-action">
-          <button class="ghost" data-reveal-round ${canReveal ? "" : "disabled"}>${label}</button>
-          <span class="action-note">${esc(note)}</span>
+          <button class="ghost" data-reveal-round>${label}</button>
+          <span class="action-note">Showing the answer lowers result quality.</span>
         </div>
       `;
     }
@@ -976,7 +929,7 @@
       const sources = (item.sources || []).slice(0, 2);
       return `
         <article class="reveal-card">
-          <span class="eyebrow">${reveal.revealed ? "Timeline anchored" : reveal.riftRepaired ? "Break repaired" : "Timeline stabilized"}</span>
+          <span class="eyebrow">${reveal.revealed ? "Answer shown" : reveal.riftRepaired ? "Break repaired" : "Timeline stabilized"}</span>
           <h3>${reveal.title || "Timeline stabilized."}</h3>
           <p><strong>${esc(item.title)}</strong> happened in ${esc(this.formatDate(item))}.</p>
           <p>${esc(reveal.explanation || item.shortWhy)}</p>
@@ -1287,7 +1240,7 @@
             }, 0);
             this.submitCorrupt(plan, card.dataset.corrupt);
           } else if (didDrag) {
-            this.showDropMiss(drop, "Drop the suspect card on Rift check.");
+            this.showDropMiss(drop, "Drop the out-of-order card in the box.");
           }
         };
         cancel = () => {
@@ -1488,11 +1441,11 @@
         const first = this.orderedEvents()[0];
         this.state.bossOrder = this.orderedEvents().map((item) => item.id);
         rs.bossLockedIds = [...this.state.bossOrder];
-        this.solveRound(first, "Timeline anchored.", "The full path is now anchored from earliest to latest.", rs.rifts > 0, true);
+        this.solveRound(first, "Order revealed.", "The full timeline is shown from earliest to latest.", rs.rifts > 0, true);
         return;
       }
       const item = this.event(plan.type === "corrupt" ? plan.misplaced : plan.target);
-      this.solveRound(item, "Timeline anchored.", this.neighborExplanation(item.id), rs.rifts > 0, true);
+      this.solveRound(item, "Answer revealed.", this.neighborExplanation(item.id), rs.rifts > 0, true);
     }
 
     showHint() {
@@ -1524,8 +1477,8 @@
         return [
           `Start with ${first.title}; it is the earliest event in this path.`,
           `End with ${last.title}; it is the latest event in this path.`,
-          "Correct rows anchor after each check, so only move the cards that remain drifting.",
-          `Middle anchors: ${middle.map((item) => `${item.title} (${this.formatDate(item)})`).join(" -> ")}.`,
+          "Correct rows lock after each check. Move only the unlocked rows.",
+          `Middle order: ${middle.map((item) => `${item.title} (${this.formatDate(item)})`).join(" -> ")}.`,
           `Full order: ${ordered.map((item) => item.title).join(" -> ")}.`,
         ];
       }
@@ -1607,11 +1560,11 @@
       const rs = this.roundState();
       const correct = this.orderedEvents().map((item) => item.id);
       if (this.state.bossOrder.every((id, index) => id === correct[index])) {
-        this.solveRound(correct.map((id) => this.event(id))[0], "Final timeline stabilized.", "Every event is anchored from earliest to latest.", rs.rifts > 0);
+        this.solveRound(correct.map((id) => this.event(id))[0], "Timeline complete.", "Every event is ordered from earliest to latest.", rs.rifts > 0);
         return;
       }
       if (Number(rs.bossAttempts || 0) >= this.rulesForDifficulty().bossAttempts) {
-        rs.bossFeedback = "Checks are used up. Use Anchor timeline when you are ready.";
+        rs.bossFeedback = "No checks remain. Show the correct order when you are ready.";
         this.liveMessage = rs.bossFeedback;
         this.save();
         this.render();
@@ -1626,28 +1579,27 @@
       rs.bossLockedIds = [...lockedIds];
       this.positionLockedBossCards(correct, rs.bossLockedIds);
       if (this.state.bossOrder.every((id, index) => id === correct[index])) {
-        this.solveRound(correct.map((id) => this.event(id))[0], "Final timeline stabilized.", "Every event is anchored from earliest to latest.", rs.rifts > 0);
+        this.solveRound(correct.map((id) => this.event(id))[0], "Timeline complete.", "Every event is ordered from earliest to latest.", rs.rifts > 0);
         return;
       }
       rs.bossAttempts += 1;
       rs.attempts += 1;
       rs.rifts += 1;
       this.state.rifts += 1;
-      const drifting = this.theme.events.length - lockedIds.size;
+      const remaining = this.theme.events.length - lockedIds.size;
       const newlyLocked = lockedIds.size - previousLocked;
       if (newlyLocked > 0) {
         const eventWord = newlyLocked === 1 ? "event" : "events";
-        const driftWord = drifting === 1 ? "is" : "are";
-        rs.bossFeedback = `${newlyLocked} new ${eventWord} anchored. ${drifting} ${driftWord} still drifting.`;
+        rs.bossFeedback = `${newlyLocked} ${eventWord} correct. ${remaining} still need moving.`;
       } else {
         const firstOpenId = this.state.bossOrder.find((id) => !lockedIds.has(id));
         const firstOpen = firstOpenId ? this.event(firstOpenId) : null;
         rs.bossFeedback = firstOpen
-          ? `No new anchors. Compare ${firstOpen.title} against nearby anchored rows before moving the rest.`
-          : "No new anchors. Compare the drifting middle cards against nearby anchored rows.";
+          ? `No new correct rows. Compare ${firstOpen.title} with its neighbors.`
+          : "No new correct rows. Recheck the unlocked cards.";
       }
       if (rs.bossAttempts >= this.rulesForDifficulty().bossAttempts) {
-        rs.bossFeedback += " Anchor timeline is available when you are ready.";
+        rs.bossFeedback += " You can now show the correct order.";
       }
       this.liveMessage = rs.bossFeedback;
       this.save();
@@ -1674,7 +1626,7 @@
 
     resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds) {
       const helped = helpedRounds ? `${helpedRounds} round${helpedRounds === 1 ? "" : "s"} used hints or reveal help` : "no rounds used hints or reveals";
-      const revealed = revealedRounds ? `${revealedRounds} round${revealedRounds === 1 ? "" : "s"} were anchored by reveal` : "no rounds were revealed";
+      const revealed = revealedRounds ? `${revealedRounds} round${revealedRounds === 1 ? "" : "s"} used the revealed answer` : "no rounds were revealed";
       const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} needed repaired breaks` : "no rounds needed repaired breaks";
       return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total breaks, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
     }
@@ -1863,13 +1815,11 @@
         .modal-head>div:first-child{min-width:0}
         .modal-head-actions{display:flex;gap:8px;flex-shrink:0}
         .icon-btn{width:42px;min-height:42px;padding:0;border-radius:50%;font-size:26px;background:rgba(255,255,255,.10);color:var(--iq-white)}
+        .feature-source{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:4px;color:var(--iq-muted);font-size:13px}.feature-source span{font-weight:800}.feature-source a{color:var(--iq-pink-light)}
         .game-slot{min-height:0;overflow:auto;overscroll-behavior:contain;padding:24px}
         .progress-block{margin-bottom:18px}.progress-copy{display:flex;justify-content:space-between;gap:16px;color:var(--iq-muted);margin-bottom:8px}.blocks{display:grid;grid-template-columns:repeat(var(--round-count,5),1fr);gap:8px;margin-top:10px}.blocks b{height:8px;border-radius:999px;background:rgba(15,23,42,.82);border:1px solid rgba(255,92,170,.20)}.blocks .on{background:linear-gradient(90deg,var(--iq-pink),var(--iq-pink-light));box-shadow:0 0 14px rgba(255,26,136,.45)}
         .round-head{display:grid;gap:6px;margin-bottom:16px}.round-head span{color:var(--iq-pink-light);font-weight:900;text-transform:uppercase;font-size:12px;letter-spacing:0}.round-head p{color:var(--iq-muted);line-height:1.45}
-        .round-task-line{margin-top:6px;color:rgba(243,244,246,.72);font-size:13px;line-height:1.4}
         .card-role{display:block;color:var(--iq-pink-light);font-size:11px;text-transform:uppercase;letter-spacing:0}
-        .free-clue{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,92,170,.24);background:rgba(255,26,136,.10);color:var(--iq-muted);line-height:1.4}
-        .free-clue b{margin-right:6px;color:var(--iq-pink-light)}
         .timeline-board{position:relative;display:flex;align-items:center;gap:10px;min-height:190px;padding:28px 16px;margin:18px 0;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));overflow-x:auto}
         .line-glow{position:absolute;left:24px;right:24px;top:50%;height:6px;background:linear-gradient(90deg,rgba(15,23,42,.74),var(--iq-pink) 18%,var(--iq-pink-light) 50%,var(--iq-pink) 82%,rgba(15,23,42,.74));box-shadow:0 0 24px rgba(255,26,136,.60);opacity:.86}
         .timeline-board:not(.armed) .line-glow{background:linear-gradient(90deg,rgba(15,23,42,.78),rgba(255,92,170,.42),rgba(15,23,42,.78));opacity:.58}
@@ -1915,7 +1865,7 @@
         .boss-status{display:flex;justify-content:space-between;color:var(--iq-muted);margin-bottom:8px}.boss-tip{margin:0 0 14px;color:var(--iq-muted);font-size:13px;line-height:1.45}.boss-list{display:grid;gap:10px}.boss-row{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--iq-blue);border:1px solid rgba(255,255,255,.12)}.boss-row.locked{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}.boss-row:not(.locked){cursor:grab;touch-action:none;user-select:none;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.boss-row:not(.locked):active,.boss-row.dragging{cursor:grabbing}.boss-row.dragging{position:relative;z-index:4;border-color:var(--iq-pink-light);box-shadow:0 18px 38px rgba(255,26,136,.20)}.boss-row.drop-target{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}.drag-handle{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.12);font-weight:900;font-size:13px;letter-spacing:0;cursor:grab}.drag-handle:active{cursor:grabbing}.boss-row.locked .drag-handle{cursor:default}.mobile-move{display:flex;gap:6px}.mobile-move button{display:inline-flex;align-items:center;justify-content:center;text-align:center;width:38px;min-width:38px;min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:var(--iq-white);font-weight:900;line-height:1.1;white-space:nowrap}
         .badge{display:inline-flex;padding:12px 16px;border-radius:999px;background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);font-weight:950;animation:pop .36s ease-out}.result{display:grid;gap:18px}.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.result-grid span{display:grid;gap:4px;padding:14px;border-radius:14px;background:rgba(255,255,255,.08)}.result-grid b{font-size:28px}.result-note{margin:0}.restored-path{display:grid;gap:8px}.restored-path div{display:grid;grid-template-columns:100px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.10)}.restored-path b{color:var(--iq-pink-light)}.story{color:var(--iq-muted);line-height:1.55}.reading-path{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.share-text{width:100%;min-height:120px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:var(--iq-navy-dark);color:var(--iq-white);padding:12px}.feature-path{display:grid;gap:8px;padding:12px;border-radius:14px;background:rgba(255,26,136,.08);border:1px solid rgba(255,92,170,.22)}
         .feature-path p,.feature-path span{color:rgba(250,252,248,.78)}.feature-path a{color:var(--iq-pink-light)}
-        h1,h2,h3,p,.event-card,.candidate,.round-task-line,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:break-word}
+        h1,h2,h3,p,.event-card,.candidate,.result,.boss-panel,.feature-path,.term-row{overflow-wrap:break-word}
         .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
         @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
         @keyframes scan{from{transform:translateX(-1.2%)}to{transform:translateX(1.2%)}}

@@ -295,7 +295,7 @@
       story:
         "Stablecoins made crypto easier to price, trade, lend, and use, while major stress events showed why design and collateral matter.",
       events: [
-        event("tether-launch", "Tether launches", "2014-10-06", "Dollar Tokens", "tether", "Tether helped popularize blockchain-issued dollar tokens for crypto markets.", "This came before Ethereum-native stablecoin experiments.", { yearLabel: "Oct 2014" }),
+        event("tether-launch", "Tether launches", "2014-11-20", "Dollar Tokens", "tether", "Tether's rename from Realcoin helped popularize blockchain-issued dollar tokens for crypto markets.", "This came before Ethereum-native stablecoin experiments.", { yearLabel: "Nov 2014" }),
         event("ethereum-mainnet", "Ethereum mainnet", "2015-07-30", "Smart Contract Era", "ethereum", "Ethereum made programmable stablecoin contracts broadly possible.", "This had to happen before DAI and many tokenized dollars."),
         event("dai-launch", "DAI launches", "2017-12-18", "On-chain Credit", "dai", "DAI showed that a decentralized stablecoin could be created and governed on-chain.", "This needed Ethereum smart contracts first.", { yearLabel: "Dec 2017" }),
         event("usdc-launch", "USDC launches", "2018-09-26", "Regulated Dollar Tokens", "usd-coin-usdc", "USDC became a major fiat-backed stablecoin used across exchanges, wallets, and DeFi.", "This followed early stablecoin demand and Ethereum token standards.", { yearLabel: "Sep 2018" }),
@@ -313,11 +313,11 @@
         "NFTs grew from early Ethereum collectibles into marketplaces, games, sports moments, and avatar communities.",
       events: [
         event("ethereum-mainnet", "Ethereum mainnet", "2015-07-30", "Smart Contract Era", "ethereum", "Ethereum made programmable collectibles and NFT marketplaces broadly possible.", "This is the base layer before the later NFT projects."),
-        event("cryptopunks-launch", "CryptoPunks launches", "2017-06-23", "Collectibles", "cryptopunks", "CryptoPunks became one of the most influential early NFT collectible projects.", "This came before the wider marketplace and avatar boom.", { yearLabel: "Jun 2017" }),
+        event("cryptopunks-launch", "CryptoPunks launches", "2017-06-01", "Collectibles", "cryptopunks", "CryptoPunks became one of the most influential early NFT collectible projects.", "This came before the wider marketplace and avatar boom.", { yearLabel: "Jun 2017", datePrecision: "month" }),
         event("opensea-launch", "OpenSea launches", "2017-12-20", "NFT Marketplaces", "opensea", "OpenSea helped make NFT discovery and trading more accessible.", "This followed the first wave of Ethereum collectibles.", { yearLabel: "late 2017", datePrecision: "approximate" }),
         event("axie-launch", "Axie Infinity launches", "2018-03-01", "Play-to-Earn", "axie-infinity", "Axie Infinity helped connect NFTs with games, economies, and digital ownership.", "This came after the earliest Ethereum collectibles.", { yearLabel: "Mar 2018", datePrecision: "month" }),
         event("nba-top-shot", "NBA Top Shot rises", "2020-10-01", "Mainstream NFTs", "nba-top-shot", "NBA Top Shot introduced many mainstream sports fans to NFT collectibles.", "This came before the 2021 avatar collection surge.", { yearLabel: "late 2020", datePrecision: "approximate" }),
-        event("bayc-mint", "Bored Ape Yacht Club mints", "2021-04-23", "Avatar Boom", "bored-ape-yacht-club", "BAYC became a symbol of the 2021 NFT avatar and community boom.", "This belongs after earlier marketplaces and mainstream collectible experiments.", { yearLabel: "Apr 2021" }),
+        event("bayc-mint", "Bored Ape Yacht Club mints", "2021-04-01", "Avatar Boom", "bored-ape-yacht-club", "BAYC became a symbol of the 2021 NFT avatar and community boom.", "This belongs after earlier marketplaces and mainstream collectible experiments.", { yearLabel: "Apr 2021", datePrecision: "month" }),
         event("blur-launch", "Blur launches", "2022-10-19", "NFT Trading", "blur", "Blur pushed NFT trading toward faster, more professional marketplace mechanics.", "This is later than the 2021 avatar boom.", { yearLabel: "Oct 2022" }),
       ],
     },
@@ -330,7 +330,7 @@
         "Ethereum scaling moved from early sidechain relief to rollups, public L2 networks, and protocol support for cheaper rollup data.",
       events: [
         event("ethereum-mainnet", "Ethereum mainnet", "2015-07-30", "Base Layer", "ethereum", "Ethereum created the settlement layer that later scaling systems extended.", "This is the starting point for Ethereum scaling."),
-        event("polygon-pos", "Polygon PoS mainnet", "2020-05-30", "Sidechains", "polygon", "Polygon PoS gave Ethereum users a cheaper execution environment before rollups matured.", "This came after Ethereum mainnet and before the L2 boom.", { yearLabel: "May 2020", datePrecision: "month" }),
+        event("polygon-pos", "Polygon PoS mainnet", "2020-06-01", "Sidechains", "polygon", "Polygon PoS gave Ethereum users a cheaper execution environment before rollups matured.", "This came after Ethereum mainnet and before the L2 boom.", { yearLabel: "Jun 2020", datePrecision: "month" }),
         event("arbitrum-one", "Arbitrum One opens", "2021-08-31", "Optimistic Rollups", "arbitrum", "Arbitrum One became a major optimistic rollup ecosystem for Ethereum applications.", "This belongs after earlier scaling networks and before later zkEVM launches.", { yearLabel: "Aug 2021" }),
         event("optimism-mainnet", "Optimism mainnet opens", "2021-12-16", "Optimistic Rollups", "optimism", "Optimism helped establish rollups as a central Ethereum scaling path.", "This sits in the same rollup wave as Arbitrum.", { yearLabel: "Dec 2021", datePrecision: "month" }),
         event("polygon-zkevm", "Polygon zkEVM launches", "2023-03-27", "ZK Rollups", "polygon-zkevm", "Polygon zkEVM brought EVM-compatible zero-knowledge scaling into public use.", "This came before Base and before Ethereum's blob upgrade.", { yearLabel: "Mar 2023" }),
@@ -557,10 +557,10 @@
             <div class="hero-copy">
               <span class="eyebrow">IQ.wiki mini-game</span>
               <h1>Repair the Web3 timeline.</h1>
-              <p>Choose a wiki source set, order events, and fix timeline breaks using clues from IQ.wiki wiki pages.</p>
+              <p>Choose a wiki source set, order events, and fix events placed in the wrong spot using clues from IQ.wiki wiki pages.</p>
               <div class="quick-rules" aria-label="Quick game rules">
                 <span><b>1</b> Drag event cards onto glowing timeline targets.</span>
-                <span><b>2</b> In broken rounds, find the one card whose date is out of order.</span>
+                <span><b>2</b> In wrong-spot rounds, find the one card whose date is out of order.</span>
                 <span><b>3</b> Use hints for clues, or reveal after misses.</span>
               </div>
               <div class="hero-actions">
@@ -625,12 +625,12 @@
       return `
         <article class="reveal-card tutorial-card">
           <span class="eyebrow">How IQ Time Rift works</span>
-          <h3>Restore the timeline before the break spreads.</h3>
+          <h3>Restore the timeline by finding events in the wrong spot.</h3>
           <div class="tutorial-grid">
             <div class="term-row"><b>Timeline placement</b><span>Drag the bottom event card onto the glowing slot where the shown event belongs.</span></div>
-            <div class="term-row"><b>Broken timeline</b><span>One event card is out of order. Drop it on the rift check, or tap it.</span></div>
+            <div class="term-row"><b>Wrong-spot timeline</b><span>One event card is out of order. Drop it on the rift check, or tap it.</span></div>
             <div class="term-row"><b>Final restore</b><span>Drag unlocked rows into earliest-to-latest order, or use Earlier / Later as fallback controls.</span></div>
-            <div class="term-row"><b>Timeline break</b><span>A wrong guess marks a break and lowers your final result quality.</span></div>
+            <div class="term-row"><b>Wrong spot</b><span>A wrong guess marks an event as misplaced and lowers your final result quality.</span></div>
             <div class="term-row"><b>Hints &amp; reveal</b><span>Hints are optional clues. Reveal unlocks after enough misses, failed checks, or hints; once it unlocks, you can keep taking clues or reveal the answer.</span></div>
             <div class="term-row"><b>Difficulty</b><span>Easy / Medium / Hard changes how many misses or hints you get before reveal unlocks.</span></div>
           </div>
@@ -661,7 +661,7 @@
         )
         .join("");
       return `
-        <div class="rift-label">Timeline break map: ${esc(this.theme.title)}</div>
+        <div class="rift-label">Wrong-spot map: ${esc(this.theme.title)}</div>
         <div class="preview-count">${this.theme.events.length} events across ${this.theme.teaser.length} eras</div>
         <div class="teaser-path">${this.theme.teaser.map((item) => `<span>${esc(item)}</span>`).join("<i></i>")}</div>
         <div class="schematic-rift" aria-hidden="true">
@@ -694,7 +694,7 @@
             ? this.revealMarkup()
             : `
               <div class="round-head">
-                <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Find the break" : "Timeline placement"}</span>
+                <span>${plan.type === "boss" ? "Final restore" : plan.type === "corrupt" ? "Find the wrong spot" : "Timeline placement"}</span>
                 <h3>${esc(this.roundTitle(plan))}</h3>
                 <p>${esc(this.roundGuidance(plan))}</p>
               </div>
@@ -746,7 +746,7 @@
           <b class="card-role">Place this event</b>
           <span>${esc(target.era)}</span>
           <strong>${esc(target.title)}</strong>
-          <small>${rift ? "That slot breaks order - drag this card to another slot." : "Drag this card onto Before, Between, or After."}</small>
+          <small>${rift ? "That is not where it belongs - drag this event to another slot." : "Drag this card onto Before, Between, or After."}</small>
         </div>
       `;
     }
@@ -760,7 +760,7 @@
             ${plan.anchors.map((id, index) => {
               const item = this.event(id);
               return `
-                <button class="event-card" data-corrupt="${esc(id)}" aria-label="${esc(`Check ${item.title} as the out-of-order card`)}">
+                <button class="event-card" data-corrupt="${esc(id)}" aria-label="${esc(`Check ${item.title} as the event that does not belong here`)}">
                   <strong>${esc(item.title)}</strong>
                 </button>
                 ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
@@ -768,8 +768,8 @@
             }).join("")}
           </div>
           <div class="corrupt-drop" data-corrupt-drop>
-            <b>Wrong card</b>
-            <span>Drop the out-of-order card here</span>
+            <b>Wrong spot</b>
+            <span>Drop the event that does not belong here</span>
           </div>
         </div>
       `;
@@ -836,10 +836,10 @@
       const after = anchors[index];
       const hit = rift?.gap === index;
       const slot = index + 1;
-      const label = hit ? "Break" : before && after ? "Between" : before ? "After" : "Before";
-      const detail = hit ? `Slot ${slot}` : before && after ? `Slot ${slot}` : before ? "After last" : after ? "Before first" : `Slot ${slot}`;
+      const label = hit ? "Wrong spot" : before && after ? "Between" : before ? "After" : "Before";
+      const detail = hit ? "Event does not belong there" : before && after ? `Slot ${slot}` : before ? "After last" : after ? "Before first" : `Slot ${slot}`;
       const context = hit
-        ? `Wrong slot ${slot}`
+        ? `Event does not belong in slot ${slot}`
         : before && after
           ? `Between ${before.title} and ${after.title}`
           : before
@@ -848,7 +848,7 @@
               ? `Before ${after.title}`
               : `Slot ${slot}`;
       const aria = hit
-        ? `Wrong slot ${slot}`
+        ? `Event does not belong in slot ${slot}`
         : before && after
           ? `Place event between ${before.title} and ${after.title}`
           : before
@@ -868,7 +868,7 @@
       if (!rs.lastRift && !rs.bossFeedback) return "";
       return `
         <div class="feedback ${rs.lastRift ? "rift" : ""}">
-          <strong>${rs.lastRift ? "Timeline break detected" : "Timeline feedback"}</strong>
+          <strong>${rs.lastRift ? "Wrong spot detected" : "Timeline feedback"}</strong>
           <p>${esc(rs.lastRift?.message || rs.bossFeedback)}</p>
         </div>
       `;
@@ -924,7 +924,7 @@
       const sources = (item.sources || []).slice(0, 2);
       return `
         <article class="reveal-card">
-          <span class="eyebrow">${reveal.revealed ? "Answer shown" : reveal.riftRepaired ? "Break repaired" : "Timeline stabilized"}</span>
+          <span class="eyebrow">${reveal.revealed ? "Answer shown" : reveal.riftRepaired ? "Wrong spot fixed" : "Timeline stabilized"}</span>
           <h3>${reveal.title || "Timeline stabilized."}</h3>
           <p><strong>${esc(item.title)}</strong> happened in ${esc(this.formatDate(item))}.</p>
           <p>${esc(reveal.explanation || item.shortWhy)}</p>
@@ -952,7 +952,7 @@
           <p>You repaired today’s wiki-sourced timeline: ${esc(this.theme.title)}.</p>
           <div class="result-grid">
             <span><b>${this.state.restoredRounds}/${totalRounds}</b>Rounds restored</span>
-            <span><b>${this.state.rifts}</b>Breaks repaired</span>
+            <span><b>${this.state.rifts}</b>Wrong spots fixed</span>
             <span><b>${this.state.hintsUsed}</b>Hints used</span>
           </div>
           ${this.resultQualityMarkup(label, totalRounds)}
@@ -1349,11 +1349,11 @@
       const expected = anchors.filter((anchor) => new Date(anchor.date) < new Date(target.date)).length;
       if (gap === expected) {
         const repaired = rs.rifts > 0;
-        this.solveRound(target, repaired ? "Break repaired." : "Timeline stabilized.", this.neighborExplanation(target.id), repaired);
+        this.solveRound(target, repaired ? "Wrong spot fixed." : "Timeline stabilized.", this.neighborExplanation(target.id), repaired);
         return;
       }
       const direction = gap < expected ? "later" : "earlier";
-      this.openRift(`Timeline break detected - this event belongs ${direction} in the timeline.`, { gap });
+      this.openRift(`Wrong spot detected - this event belongs ${direction} in the timeline.`, { gap });
     }
 
     openRift(message, detail = {}) {
@@ -1623,8 +1623,8 @@
     resultQualityCopy(label, totalRounds, helpedRounds, revealedRounds, breakRounds) {
       const helped = helpedRounds ? `${helpedRounds} round${helpedRounds === 1 ? "" : "s"} used hints or reveal help` : "no rounds used hints or reveals";
       const revealed = revealedRounds ? `${revealedRounds} round${revealedRounds === 1 ? "" : "s"} used the revealed answer` : "no rounds were revealed";
-      const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} needed repaired breaks` : "no rounds needed repaired breaks";
-      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total breaks, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
+      const breaks = breakRounds ? `${breakRounds} round${breakRounds === 1 ? "" : "s"} had wrong spots fixed` : "no rounds had wrong spots";
+      return `${label} is based on ${this.state.restoredRounds}/${totalRounds} restored rounds, ${this.state.rifts} total wrong spots, and ${this.state.hintsUsed} hints. ${helped}; ${revealed}; ${breaks}.`;
     }
 
     shareText() {
@@ -1639,7 +1639,7 @@
       return [
         `IQ Time Rift — ${this.theme.title}`,
         `${this.qualityLabel()}: ${this.state.restoredRounds}/${totalRounds} rounds`,
-        `Breaks repaired: ${this.state.rifts} · Hints: ${this.state.hintsUsed}`,
+        `Wrong spots fixed: ${this.state.rifts} · Hints: ${this.state.hintsUsed}`,
         markers.join(""),
         "https://iq.wiki",
       ].join("\n");
@@ -1855,7 +1855,8 @@
         .corrupt-drop.drop-target{border-color:var(--iq-pink-light);box-shadow:0 0 30px rgba(255,26,136,.38);transform:scale(1.03);color:var(--iq-white)}
         .feedback,.reveal-card,.result,.boss-panel{border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:18px;margin-top:18px}
         .feedback.rift{border-color:rgba(255,92,170,.55);background:rgba(255,26,136,.10)}
-        .hint-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hint-copy{display:grid;gap:4px;min-width:min(100%,420px)}.hint-box p{color:var(--iq-muted)}
+.hint-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hint-copy{display:grid;gap:4px;min-width:min(100%,420px)}.hint-copy:empty{display:none}.hint-box p{color:var(--iq-muted)}
+.sticky-actions .hint-box{display:contents}.sticky-actions [data-hint]{order:1}.sticky-actions .reveal-action{order:2}.sticky-actions .hint-copy{order:3;flex-basis:100%;min-width:0}
         .sticky-actions{position:sticky;bottom:0;padding:14px 0;background:linear-gradient(180deg,rgba(23,32,43,0),var(--iq-navy) 32%)}
         .reveal-action{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
         .action-note{max-width:360px;color:rgba(243,244,246,.62);font-size:12px;line-height:1.35}

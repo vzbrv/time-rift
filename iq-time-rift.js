@@ -678,7 +678,7 @@
       const stability = Math.round((this.state.restoredRounds / totalRounds) * 100);
       return `
         <div class="progress-block">
-          <div class="progress-copy"><strong>Timeline integrity: ${stability}%</strong><span>Round ${this.state.roundIndex + 1}/${totalRounds}</span></div>
+          <div class="progress-copy"><strong>Score: ${stability}%</strong><span>Round ${this.state.roundIndex + 1}/${totalRounds}</span></div>
           <p class="current-objective">${esc(this.objectiveCopy(plan))}</p>
           <div class="stability"><i style="width:${stability}%"></i></div>
           <div class="blocks" style="--round-count:${totalRounds}" aria-label="Round progress">${Array.from({ length: totalRounds }, (_, i) => `<b class="${i < this.state.restoredRounds ? "on" : ""}"></b>`).join("")}</div>
@@ -1585,8 +1585,7 @@
       [order[index], order[next]] = [order[next], order[index]];
       this.state.bossOrder = order;
       this.save();
-      this.render();
-      this.openModal();
+      if (!this.syncBossDomOrder()) this.render();
     }
 
     dropBoss(targetId) {
@@ -1607,8 +1606,29 @@
       this.state.bossOrder = order;
       this.dragId = null;
       this.save();
-      this.render();
-      this.openModal();
+      if (!this.syncBossDomOrder()) this.render();
+    }
+
+    syncBossDomOrder() {
+      const list = this.shadowRoot.querySelector(".boss-list");
+      if (!list) return false;
+      const rows = new Map(Array.from(list.querySelectorAll("[data-boss-id]")).map((row) => [row.dataset.bossId, row]));
+      const fragment = document.createDocumentFragment();
+      this.state.bossOrder.forEach((id) => {
+        const row = rows.get(id);
+        if (row) fragment.appendChild(row);
+      });
+      list.appendChild(fragment);
+      this.refreshBossMoveIndexes();
+      return true;
+    }
+
+    refreshBossMoveIndexes() {
+      this.shadowRoot.querySelectorAll("[data-boss-id]").forEach((row, index) => {
+        row.querySelectorAll("[data-move]").forEach((button) => {
+          button.dataset.move = String(index);
+        });
+      });
     }
 
     positionLockedBossCards(correct, lockedIds) {

@@ -115,6 +115,20 @@ try {
     element.save();
     element.render();
     const corruptPlan = element.currentPlan();
+    const corruptCards = [...element.shadowRoot.querySelectorAll("[data-corrupt]")];
+    if (!corruptCards.length || corruptCards.some((card) => card.querySelector("span, small, .drag-cue"))) {
+      return fail("corrupt cards expose ordering metadata");
+    }
+    if (element.roundGuidance(corruptPlan).toLowerCase().includes("date")) {
+      return fail("corrupt guidance refers to hidden dates");
+    }
+    const wrongCorruptId = corruptPlan.anchors.find((id) => id !== corruptPlan.misplaced);
+    element.submitCorrupt(corruptPlan, wrongCorruptId);
+    const answerCard = [...element.shadowRoot.querySelectorAll("[data-corrupt]")]
+      .find((card) => card.dataset.corrupt === corruptPlan.misplaced);
+    if (answerCard?.classList.contains("rift-card") || answerCard?.querySelector(".drag-cue")) {
+      return fail("failed corrupt attempt revealed the answer");
+    }
     element.submitCorrupt(corruptPlan, corruptPlan.misplaced);
     if (element.state.phase !== "revealing" || !element.state.pendingReveal) {
       return fail("corrupt round did not solve");

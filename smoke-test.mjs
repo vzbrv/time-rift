@@ -135,7 +135,7 @@ try {
     element.save();
     element.render();
     element.submitBoss();
-    if (element.state.phase !== "revealing" || element.state.pendingReveal?.title !== "Final timeline stabilized.") {
+    if (element.state.phase !== "revealing" || element.state.pendingReveal?.title !== "Timeline complete.") {
       return fail("boss correct order was blocked after checks were exhausted");
     }
 

@@ -788,12 +788,12 @@
       const checkLabel = canCheck ? "Check order" : "Show order";
       const tip = canCheck
         ? "Move unlocked rows into earliest-to-latest order, then check."
-        : "Checks are used up. Show the order when ready.";
+        : "No checks remain. Your only option is to reveal the order, which lowers your final result quality.";
       return `
         <div class="boss-panel">
           <div class="boss-status">
             <strong>${locked.size}/${this.theme.events.length} correctly placed</strong>
-            <span>${attemptsLeft ? `${attemptsLeft} checks remaining` : "Show order available"}</span>
+            <span>${attemptsLeft ? `${attemptsLeft} checks remaining` : "No checks remaining"}</span>
           </div>
           <p class="boss-tip">${tip}</p>
           <div class="boss-list" role="list">
@@ -912,7 +912,7 @@
       return `
         <div class="reveal-action">
           <button class="ghost" data-reveal-round>${label}</button>
-          <span class="action-note">Showing the answer lowers result quality.</span>
+          <span class="action-note">Revealing the answer lowers your final result quality.</span>
         </div>
       `;
     }

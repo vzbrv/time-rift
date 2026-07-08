@@ -86,6 +86,113 @@ try {
     );
   }
 
+  const gameplay = await page.locator("iq-time-rift").evaluate((element) => {
+    const fail = (message) => ({ ok: false, error: message });
+    const reset = () => {
+      element.state = element.newState(element.theme.id, "Standard");
+      element.showTutorial = false;
+      element.save();
+      element.render();
+    };
+    const eventTime = (id) => new Date(element.event(id).date).getTime();
+    const expectedGap = (plan) => {
+      const targetTime = eventTime(plan.target);
+      return plan.anchors
+        .map((id) => eventTime(id))
+        .filter((time) => time < targetTime).length;
+    };
+
+    reset();
+    const placePlan = element.plans().find((plan) => plan.type === "place");
+    element.submitPlacement(placePlan, expectedGap(placePlan));
+    if (element.state.phase !== "revealing" || !element.state.pendingReveal) {
+      return fail("placement round did not solve");
+    }
+
+    reset();
+    const corruptIndex = element.plans().findIndex((plan) => plan.type === "corrupt");
+    element.state.roundIndex = corruptIndex;
+    element.save();
+    element.render();
+    const corruptPlan = element.currentPlan();
+    element.submitCorrupt(corruptPlan, corruptPlan.misplaced);
+    if (element.state.phase !== "revealing" || !element.state.pendingReveal) {
+      return fail("corrupt round did not solve");
+    }
+
+    reset();
+    element.roundState().hintLevel = element.rulesForDifficulty().hintsBeforeReveal;
+    element.revealAndContinue();
+    if (element.state.phase !== "revealing" || element.state.revealsUsed !== 1) {
+      return fail("reveal path did not enter reveal phase");
+    }
+
+    reset();
+    const bossIndex = element.plans().findIndex((plan) => plan.type === "boss");
+    element.state.roundIndex = bossIndex;
+    element.state.bossOrder = element.orderedEvents().map((item) => item.id);
+    element.roundState().bossAttempts = element.rulesForDifficulty().bossAttempts;
+    element.save();
+    element.render();
+    element.submitBoss();
+    if (element.state.phase !== "revealing" || element.state.pendingReveal?.title !== "Final timeline stabilized.") {
+      return fail("boss correct order was blocked after checks were exhausted");
+    }
+
+    let keyCalls = 0;
+    const originalHandleKeys = element.handleKeys.bind(element);
+    element.handleKeys = (event) => {
+      keyCalls += 1;
+      return originalHandleKeys(event);
+    };
+    element.render();
+    element.render();
+    element.shadowRoot.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    if (keyCalls !== 1) return fail(`keydown handler fired ${keyCalls} times`);
+
+    return { ok: true };
+  });
+
+  if (!gameplay.ok) throw new Error(gameplay.error);
+
+  const storageRecovery = await page.evaluate(() => {
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    localStorage.setItem(
+      `iq-time-rift-state-v3:${todayKey}`,
+      JSON.stringify({
+        themeId: "road-to-defi",
+        roundIndex: 999,
+        phase: "playing",
+        restoredRounds: 999,
+        rifts: -5,
+        hintsUsed: "bad",
+        roundState: [],
+      })
+    );
+    localStorage.setItem("iq-time-rift-tutorial-seen-v1", "1");
+    return { ok: true };
+  });
+  if (!storageRecovery.ok) throw new Error(storageRecovery.error);
+
+  await page.reload({ waitUntil: "networkidle" });
+  const recovered = await page.locator("iq-time-rift").evaluate((element) => {
+    const totalRounds = element.totalRounds();
+    return {
+      ok:
+        element.state.roundIndex >= 0 &&
+        element.state.roundIndex < totalRounds &&
+        element.state.restoredRounds <= totalRounds &&
+        element.state.rifts === 0 &&
+        Boolean(element.shadowRoot.querySelector(".rift-shell")),
+      state: element.state,
+      totalRounds,
+    };
+  });
+  if (!recovered.ok) {
+    throw new Error(`stored-state recovery failed: ${JSON.stringify(recovered)}`);
+  }
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: "networkidle" });
   const mobile = await page.evaluate(() => ({

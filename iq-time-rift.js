@@ -717,7 +717,7 @@
 
     roundGuidance(plan) {
       if (plan.type === "boss") return "Move unlocked rows into earliest-to-latest order, then check.";
-      if (plan.type === "corrupt") return "Read dates left to right, then tap or drop the one card out of order.";
+      if (plan.type === "corrupt") return "Read the events left to right, then tap or drop the one event out of order.";
       const target = this.event(plan.target);
       return `Place ${target.title} where both neighbors stay in date order.`;
     }
@@ -759,14 +759,9 @@
             <div class="line-glow"></div>
             ${plan.anchors.map((id, index) => {
               const item = this.event(id);
-              const misplaced = id === plan.misplaced;
-              const dateLabel = this.formatDate(item);
               return `
-                <button class="event-card ${misplaced && rift ? "rift-card" : ""}" data-corrupt="${esc(id)}" aria-label="${esc(`Check ${item.title} as the out-of-order card`)}">
-                  ${misplaced && rift ? '<b class="drag-cue">Found</b>' : ""}
-                  <span>${esc(item.era)}</span>
+                <button class="event-card" data-corrupt="${esc(id)}" aria-label="${esc(`Check ${item.title} as the out-of-order card`)}">
                   <strong>${esc(item.title)}</strong>
-                  <small>${misplaced && rift ? "Correct - this date is out of order" : `Date: ${esc(dateLabel)}`}</small>
                 </button>
                 ${index < plan.anchors.length - 1 ? '<i class="connector"></i>' : ""}
               `;
@@ -1851,7 +1846,8 @@
         .rift-card{border-color:var(--iq-pink-light);box-shadow:0 0 26px rgba(255,26,136,.34)}
         .corrupt-play{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,240px);gap:12px;align-items:stretch;margin:18px 0}
         .corrupt-play .timeline-board{margin:0;overflow:hidden;padding-inline:12px}
-        .corrupt-play .event-card{min-width:0;flex:1 1 0;padding-inline:10px}
+        .corrupt-play .event-card{min-width:0;min-height:150px;flex:1 1 0;place-content:center;padding:16px 10px;text-align:center}
+        .corrupt-play .event-card strong{font-size:15px;line-height:1.25}
         .corrupt-play .connector{min-width:12px;flex:0 1 24px}
         .micro{color:var(--iq-muted);margin-top:8px}
         .corrupt-drop{display:grid;place-content:center;gap:6px;min-height:190px;width:auto;margin:0;padding:16px;border-radius:16px;border:1px dashed rgba(255,92,170,.45);background:rgba(255,26,136,.08);color:var(--iq-muted);text-align:center;transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease}

@@ -8,6 +8,8 @@ const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
 };
 
 const server = createServer(async (req, res) => {
@@ -86,6 +88,45 @@ try {
     );
   }
 
+  await page.waitForTimeout(50);
+  const modalFocus = await page.locator("iq-time-rift").evaluate((element) => {
+    const active = element.shadowRoot.activeElement;
+    return {
+      activeDismiss: Boolean(active?.matches("[data-tutorial-dismiss]")),
+      activeHowTo: Boolean(active?.matches("[data-howto]")),
+    };
+  });
+  if (!modalFocus.activeDismiss || modalFocus.activeHowTo) {
+    throw new Error(`unexpected tutorial focus target: ${JSON.stringify(modalFocus)}`);
+  }
+
+  const content = await page.locator("iq-time-rift").evaluate((element) => {
+    const debug = window.__IQ_TIME_RIFT_DEBUG__;
+    const contentErrors = debug?.validateContent?.() || ["missing debug validator"];
+    const externalLinks = [...element.shadowRoot.querySelectorAll('a[target="_blank"]')].map((link) => ({
+      href: link.href,
+      rel: link.rel,
+    }));
+    const insecureLinks = externalLinks.filter((link) => {
+      const tokens = link.rel.split(/\s+/);
+      return !tokens.includes("noopener") || !tokens.includes("noreferrer");
+    });
+    return {
+      contentErrors,
+      insecureLinks,
+      storageKey: debug?.storageKey || "",
+    };
+  });
+  if (content.contentErrors.length) {
+    throw new Error(`content validation failed: ${JSON.stringify(content.contentErrors)}`);
+  }
+  if (content.insecureLinks.length) {
+    throw new Error(`unsafe external links: ${JSON.stringify(content.insecureLinks)}`);
+  }
+  if (!/^iq-time-rift-v2:\d{4}-\d{2}-\d{2}$/.test(content.storageKey)) {
+    throw new Error(`unexpected storage key: ${content.storageKey}`);
+  }
+
   const gameplay = await page.locator("iq-time-rift").evaluate((element) => {
     const fail = (message) => ({ ok: false, error: message });
     const reset = () => {
@@ -101,6 +142,13 @@ try {
         .map((id) => eventTime(id))
         .filter((time) => time < targetTime).length;
     };
+
+    reset();
+    element.openModal();
+    if (element.initialModalFocus()?.matches("[data-howto]")) {
+      return fail("modal initial focus lands on help button");
+    }
+    element.closeModal();
 
     reset();
     const placePlan = element.plans().find((plan) => plan.type === "place");
@@ -170,10 +218,10 @@ try {
   if (!gameplay.ok) throw new Error(gameplay.error);
 
   const storageRecovery = await page.evaluate(() => {
-    const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const debug = window.__IQ_TIME_RIFT_DEBUG__;
+    if (!debug?.storageKey) return { ok: false, error: "missing storage key" };
     localStorage.setItem(
-      `iq-time-rift-state-v3:${todayKey}`,
+      debug.storageKey,
       JSON.stringify({
         themeId: "road-to-defi",
         roundIndex: 999,
@@ -218,6 +266,18 @@ try {
     throw new Error(
       `mobile horizontal overflow: ${mobile.scrollWidth} > ${mobile.clientWidth}`
     );
+  }
+  const mobileWidget = await page.locator("iq-time-rift").evaluate((element) => {
+    const rootNode = element.shadowRoot;
+    const preview = rootNode.querySelector(".preview");
+    return {
+      sourceLabel: rootNode.querySelector(".selected-source")?.textContent?.trim() || "",
+      previewRingDisplay: preview ? getComputedStyle(preview, "::after").display : "",
+    };
+  });
+  if (!mobileWidget.sourceLabel) throw new Error("mobile source label missing");
+  if (mobileWidget.previewRingDisplay !== "none") {
+    throw new Error(`mobile preview ring still visible: ${mobileWidget.previewRingDisplay}`);
   }
   if (failures.length) {
     throw new Error(`browser errors:\n${failures.join("\n")}`);

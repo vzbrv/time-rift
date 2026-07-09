@@ -1,10 +1,10 @@
 (() => {
   const WIKI_BASE = "https://iq.wiki/wiki/";
 
-  const getLocalDateKey = (date = new Date()) => {
-    const yearPart = date.getFullYear();
-    const monthPart = String(date.getMonth() + 1).padStart(2, "0");
-    const dayPart = String(date.getDate()).padStart(2, "0");
+  const getUtcDateKey = (date = new Date()) => {
+    const yearPart = date.getUTCFullYear();
+    const monthPart = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const dayPart = String(date.getUTCDate()).padStart(2, "0");
     return `${yearPart}-${monthPart}-${dayPart}`;
   };
 
@@ -18,9 +18,9 @@
     return hash >>> 0;
   };
 
-  const pickDailyIndex = (key, length) => (length ? hashString(key) % length : 0);
-  const TODAY_KEY = getLocalDateKey(new Date());
-  const STORAGE_KEY = `iq-time-rift-v2:${TODAY_KEY}`;
+  const pickDateSeededIndex = (key, length) => (length ? hashString(key) % length : 0);
+  const DATE_KEY = getUtcDateKey(new Date());
+  const STORAGE_KEY = `iq-time-rift-v2:${DATE_KEY}`;
   const TUTORIAL_KEY = "iq-time-rift-tutorial-seen-v1";
   const WIKI_SOURCE_LABEL = "Lore from IQ.wiki";
 
@@ -49,10 +49,19 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
 
+  const isAllowedUrl = (value = "") => {
+    try {
+      const url = new URL(value, window.location.href);
+      return ["http:", "https:", "mailto:"].includes(url.protocol);
+    } catch {
+      return false;
+    }
+  };
+
   const safeUrl = (value = "") => {
     try {
       const url = new URL(value, window.location.href);
-      return ["http:", "https:", "mailto:"].includes(url.protocol) ? url.href : "#";
+      return isAllowedUrl(value) ? url.href : "#";
     } catch {
       return "#";
     }
@@ -348,7 +357,7 @@
 
   const difficultyLabels = Object.keys(difficultyRules);
 
-  const DAILY_THEME_ID = themes[pickDailyIndex(TODAY_KEY, themes.length)]?.id || themes[0]?.id;
+  const CURRENT_THEME_ID = themes[pickDateSeededIndex(DATE_KEY, themes.length)]?.id || themes[0]?.id;
 
   const roundPlans = {
     "road-to-defi": [
@@ -388,6 +397,64 @@
     ],
   };
 
+  const validateContent = (themeList = themes, planMap = roundPlans) => {
+    const errors = [];
+    const themeIds = new Set();
+
+    for (const theme of themeList) {
+      if (!theme?.id) {
+        errors.push("theme is missing an id");
+        continue;
+      }
+      if (themeIds.has(theme.id)) errors.push(`duplicate theme id: ${theme.id}`);
+      themeIds.add(theme.id);
+      if (theme.featurePath?.ctaUrl && !isAllowedUrl(theme.featurePath.ctaUrl)) {
+        errors.push(`${theme.id}: unsafe feature path url ${theme.featurePath.ctaUrl}`);
+      }
+
+      const eventIds = new Set();
+      for (const item of theme.events || []) {
+        if (!item?.id) {
+          errors.push(`${theme.id}: event is missing an id`);
+          continue;
+        }
+        if (eventIds.has(item.id)) errors.push(`${theme.id}: duplicate event id ${item.id}`);
+        eventIds.add(item.id);
+        if (!item.title) errors.push(`${theme.id}/${item.id}: missing title`);
+        if (Number.isNaN(new Date(item.date).getTime())) errors.push(`${theme.id}/${item.id}: invalid date ${item.date}`);
+        if (!item.wikiSlug) errors.push(`${theme.id}/${item.id}: missing wiki slug`);
+        for (const sourceItem of item.sources || []) {
+          if (!sourceItem.label) errors.push(`${theme.id}/${item.id}: source missing label`);
+          if (!isAllowedUrl(sourceItem.url)) errors.push(`${theme.id}/${item.id}: unsafe source url ${sourceItem.url || "(empty)"}`);
+        }
+      }
+
+      if (!planMap[theme.id]) errors.push(`${theme.id}: missing round plan`);
+      for (const plan of planMap[theme.id] || []) {
+        for (const id of [plan.target, plan.misplaced, ...(plan.anchors || [])].filter(Boolean)) {
+          if (!eventIds.has(id)) errors.push(`${theme.id}: round plan references unknown event ${id}`);
+        }
+      }
+    }
+
+    for (const planThemeId of Object.keys(planMap)) {
+      if (!themeIds.has(planThemeId)) errors.push(`round plan references unknown theme ${planThemeId}`);
+    }
+
+    return errors;
+  };
+
+  const CONTENT_ERRORS = validateContent();
+  if (CONTENT_ERRORS.length) {
+    throw new Error(`IQ Time Rift content validation failed:\n${CONTENT_ERRORS.join("\n")}`);
+  }
+
+  window.__IQ_TIME_RIFT_DEBUG__ = Object.freeze({
+    dateKey: DATE_KEY,
+    storageKey: STORAGE_KEY,
+    validateContent: () => validateContent(),
+  });
+
   const resultLabels = {
     perfect: "Perfect Restore",
     clean: "Clean Restore",
@@ -400,7 +467,7 @@
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
-      this.theme = themes.find((theme) => theme.id === DAILY_THEME_ID) || themes[0];
+      this.theme = themes.find((theme) => theme.id === CURRENT_THEME_ID) || themes[0];
       this.state = this.loadState();
       this.dragId = null;
       this.liveMessage = "";
@@ -431,11 +498,11 @@
           return this.normalizeState(stored);
         }
       } catch {}
-      return this.newState(DAILY_THEME_ID);
+      return this.newState(CURRENT_THEME_ID);
     }
 
     normalizeState(state) {
-      const themeId = themes.some((theme) => theme.id === state.themeId) ? state.themeId : DAILY_THEME_ID;
+      const themeId = themes.some((theme) => theme.id === state.themeId) ? state.themeId : CURRENT_THEME_ID;
       const totalRounds = (roundPlans[themeId] || roundPlans["road-to-defi"]).length;
       const roundIndex = this.clampWholeNumber(state.roundIndex, 0, Math.max(0, totalRounds - 1));
       const completed = Boolean(state.completed);
@@ -571,6 +638,7 @@
                 </label>
                 <label class="select-control source-select">
                   <span>Wiki source set</span>
+                  <strong class="selected-source">${esc(this.theme.title)}</strong>
                   <select data-theme-select>${this.themeOptionsMarkup()}</select>
                 </label>
                 <button class="ghost" data-howto>How to play</button>
@@ -591,7 +659,7 @@
           <div class="modal-head">
             <div>${this.themeHeader()}</div>
             <div class="modal-head-actions">
-              <button class="icon-btn" data-howto aria-label="How to play">?</button>
+              <button class="icon-btn" data-howto aria-label="How to play" ${this.showTutorial ? "hidden" : ""}>?</button>
               <button class="icon-btn" data-close aria-label="Close">×</button>
             </div>
           </div>
@@ -616,7 +684,7 @@
       return `
         <div class="feature-source">
           <span>${esc(path.title || path.label || "IQ.wiki")}</span>
-          ${path.ctaUrl ? `<a href="${safeUrl(path.ctaUrl)}" target="_blank" rel="noreferrer">${esc(path.ctaText || "Explore on IQ.wiki")}</a>` : ""}
+          ${path.ctaUrl ? `<a href="${safeUrl(path.ctaUrl)}" target="_blank" rel="noopener noreferrer">${esc(path.ctaText || "Explore on IQ.wiki")}</a>` : ""}
         </div>
       `;
     }
@@ -644,7 +712,7 @@
         <div class="feature-path">
           <strong>${esc(path.title || path.label || "IQ.wiki")}</strong>
           <p>${esc(path.description || "Timeline lore built from IQ.wiki pages.")}</p>
-          ${path.ctaUrl ? `<a href="${safeUrl(path.ctaUrl)}" target="_blank" rel="noreferrer">${esc(path.ctaText || "Explore on IQ.wiki")}</a>` : ""}
+          ${path.ctaUrl ? `<a href="${safeUrl(path.ctaUrl)}" target="_blank" rel="noopener noreferrer">${esc(path.ctaText || "Explore on IQ.wiki")}</a>` : ""}
         </div>
       `;
     }
@@ -778,7 +846,7 @@
     bossMarkup() {
       const rs = this.roundState();
       if (!this.state.bossOrder) {
-        this.state.bossOrder = this.shuffle(this.theme.events.map((item) => item.id), `${this.theme.id}:${TODAY_KEY}:boss`);
+        this.state.bossOrder = this.shuffle(this.theme.events.map((item) => item.id), `${this.theme.id}:${DATE_KEY}:boss`);
         this.save();
       }
       const locked = new Set(rs.bossLockedIds);
@@ -933,8 +1001,8 @@
             <span>${esc(item.shortWhy)}</span>
           </div>
           <div class="source-row">
-            <a href="${safeUrl(slugUrl(item.wikiSlug))}" target="_blank" rel="noreferrer">Read on IQ.wiki →</a>
-            ${sources.map((source) => `<a href="${safeUrl(source.url)}" target="_blank" rel="noreferrer">${esc(source.label)}</a>`).join("")}
+            <a href="${safeUrl(slugUrl(item.wikiSlug))}" target="_blank" rel="noopener noreferrer">Read on IQ.wiki →</a>
+            ${sources.map((source) => `<a href="${safeUrl(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.label)}</a>`).join("")}
           </div>
           <button class="primary wide" data-continue>Continue</button>
         </article>
@@ -949,7 +1017,7 @@
         <div class="result">
           <div class="badge">${esc(label)}</div>
           <h3>Timeline restored.</h3>
-          <p>You repaired today’s wiki-sourced timeline: ${esc(this.theme.title)}.</p>
+          <p>You repaired this wiki-sourced timeline: ${esc(this.theme.title)}.</p>
           <div class="result-grid">
             <span><b>${this.state.restoredRounds}/${totalRounds}</b>Rounds restored</span>
             <span><b>${this.state.rifts}</b>Wrong spots fixed</span>
@@ -962,7 +1030,7 @@
           <p class="story">${esc(this.theme.story)}</p>
           <div class="reading-path">
             <strong>Reading path</strong>
-            ${timeline.slice(0, 5).map((item) => `<a href="${safeUrl(slugUrl(item.wikiSlug))}" target="_blank" rel="noreferrer">${esc(item.title)}</a>`).join("")}
+            ${timeline.slice(0, 5).map((item) => `<a href="${safeUrl(slugUrl(item.wikiSlug))}" target="_blank" rel="noopener noreferrer">${esc(item.title)}</a>`).join("")}
           </div>
           ${this.theme.featurePath ? this.featurePathResultMarkup(this.theme.featurePath) : ""}
           <div class="result-actions">
@@ -980,7 +1048,7 @@
         <div class="feature-path result-path">
           <strong>${esc(path.label || path.title || "Timeline complete")}</strong>
           <span>${esc(path.description || "Educational timeline complete.")}</span>
-          ${path.ctaUrl ? `<a href="${safeUrl(path.ctaUrl)}" target="_blank" rel="noreferrer">${esc(path.ctaText || "Read more on IQ.wiki")}</a>` : ""}
+          ${path.ctaUrl ? `<a href="${safeUrl(path.ctaUrl)}" target="_blank" rel="noopener noreferrer">${esc(path.ctaText || "Read more on IQ.wiki")}</a>` : ""}
         </div>
       `;
     }
@@ -1697,7 +1765,7 @@
       return `${item.title} is stable; it belongs ${window}. Look for the card sitting away from its real date neighbors.`;
     }
 
-    shuffle(values, seed = `${this.theme.id}:${TODAY_KEY}`) {
+    shuffle(values, seed = `${this.theme.id}:${DATE_KEY}`) {
       const scored = [...values].sort((a, b) => a.localeCompare(b)).map((value, index) => ({
         value,
         score: hashString(`${seed}:${value}:${index}`),
@@ -1716,7 +1784,7 @@
       const backdrop = this.shadowRoot.querySelector("[data-backdrop]");
       if (modal) modal.hidden = false;
       if (backdrop) backdrop.hidden = false;
-      setTimeout(() => this.modalFocusables()[0]?.focus(), 0);
+      setTimeout(() => this.initialModalFocus()?.focus(), 0);
     }
 
     closeModal() {
@@ -1731,6 +1799,27 @@
 
     modalFocusables() {
       return [...this.shadowRoot.querySelectorAll('.modal button:not([disabled]), .modal a[href], .modal textarea:not([disabled]), .modal input:not([disabled]), .modal select:not([disabled]), .modal [tabindex]:not([tabindex="-1"])')];
+    }
+
+    initialModalFocus() {
+      const selectors = this.showTutorial
+        ? ["[data-tutorial-dismiss]", "[data-close]"]
+        : [
+            "[data-placement-card]",
+            "[data-gap]:not([disabled])",
+            "[data-corrupt]",
+            "[data-submit-boss]:not([disabled])",
+            "[data-boss-id]:not(.locked)",
+            "[data-continue]",
+            "[data-share]",
+            "[data-close]",
+          ];
+      const focusables = this.modalFocusables();
+      for (const selector of selectors) {
+        const target = this.shadowRoot.querySelector(selector);
+        if (target && focusables.includes(target)) return target;
+      }
+      return focusables[0] || null;
     }
 
     handleKeys(event) {
@@ -1774,12 +1863,13 @@
         .quick-rules b{display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:var(--iq-pink);color:var(--iq-white);font-size:12px;box-shadow:0 0 14px rgba(255,26,136,.42)}
         .hero-actions,.result-actions,.sticky-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
         .hero-actions{align-items:end}
-        .select-control{position:relative;display:grid;gap:7px;min-width:min(100%,190px)}
+        .select-control{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:7px;min-width:min(100%,190px)}
         .select-control::after{content:"";position:absolute;right:15px;bottom:18px;width:8px;height:8px;border-right:2px solid var(--iq-pink-light);border-bottom:2px solid var(--iq-pink-light);transform:rotate(45deg);pointer-events:none}
         .select-control span{font-size:11px;font-weight:950;color:var(--iq-pink-light);text-transform:uppercase}
-        .select-control select{appearance:none;-webkit-appearance:none;width:100%;min-height:48px;border-radius:8px;padding:0 40px 0 14px;background:linear-gradient(135deg,rgba(255,26,136,.18),rgba(15,23,42,.82));color:var(--iq-white);border:1px solid rgba(255,92,170,.42);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 12px 28px rgba(0,0,0,.18);font-weight:900}
+        .select-control select{appearance:none;-webkit-appearance:none;width:100%;min-width:0;min-height:48px;border-radius:8px;padding:0 40px 0 14px;background:linear-gradient(135deg,rgba(255,26,136,.18),rgba(15,23,42,.82));color:var(--iq-white);border:1px solid rgba(255,92,170,.42);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 12px 28px rgba(0,0,0,.18);font-weight:900;text-overflow:ellipsis}
         .select-control:focus-within select{border-color:var(--iq-pink-light);box-shadow:0 0 0 3px rgba(255,26,136,.22),0 14px 34px rgba(255,26,136,.18)}
         .select-control select option{background:var(--iq-navy);color:var(--iq-white)}
+        .selected-source{display:block;max-width:100%;color:rgba(255,255,255,.82);font-size:13px;line-height:1.25;font-weight:850;text-transform:none;overflow-wrap:anywhere}
         .source-select{min-width:min(100%,300px)}
         .primary,.secondary,.ghost,.icon-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.12;white-space:normal;border:0;border-radius:8px;min-height:48px;padding:0 18px;font-weight:850;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
         .primary{background:linear-gradient(135deg,var(--iq-pink),var(--iq-pink-light));color:var(--iq-white);box-shadow:0 14px 34px rgba(255,26,136,.30)}
@@ -1879,7 +1969,7 @@
           .timeline-board.dragging-placement .gap.armed,.gap.drop-target,.corrupt-drop.drop-target,.boss-row.dragging,.boss-row.drop-target{transform:none!important}
         }
         @media (max-width:760px){
-          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;border-radius:0}.game-slot{padding:18px}.corrupt-play{grid-template-columns:1fr}.corrupt-drop{min-height:auto;order:-1}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
+          .rift-shell{padding:18px;border-radius:0;min-height:100vh}.hero{grid-template-columns:minmax(0,1fr);min-height:auto;gap:20px}.hero-copy{padding:20px}.preview{min-height:320px;align-self:auto;padding:20px}.preview::after{display:none}h1{font-size:40px}.hero-actions{align-items:stretch}.select-control,.source-select{width:100%;min-width:0}.selected-source{font-size:12px}.schematic-rift{height:72px}.stat-row{grid-template-columns:1fr}.modal{inset:0;border-radius:0}.game-slot{padding:18px}.corrupt-play{grid-template-columns:1fr}.corrupt-drop{min-height:auto;order:-1}.timeline-board{align-items:stretch;flex-direction:column;overflow:visible}.line-glow{top:28px;bottom:28px;left:50%;right:auto;width:6px;height:auto}.event-card,.candidate,.gap{width:100%;min-width:0}.gap{height:68px;border-radius:16px}.preview-eras,.result-grid{grid-template-columns:1fr}.boss-row{grid-template-columns:32px 1fr}.mobile-move{grid-column:1 / -1}.sticky-actions{margin-left:-18px;margin-right:-18px;padding:14px 18px}.restored-path div{grid-template-columns:82px 1fr}.term-row{grid-template-columns:1fr;gap:4px}
         }
       `;
     }

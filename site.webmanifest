@@ -1,0 +1,16 @@
+{
+  "name": "IQ Time Rift",
+  "short_name": "Time Rift",
+  "description": "Repair Web3 history with IQ.wiki timeline clues.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#17202B",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

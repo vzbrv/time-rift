@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="IQ Time Rift">
+  <rect width="1200" height="630" fill="#0F172A"/>
+  <path d="M0 540C180 480 260 620 430 550S690 390 860 470s230 20 340-90v250H0Z" fill="#17202B"/>
+  <path d="M160 315c150-210 520-210 880 0-360 210-730 210-880 0Z" fill="none" stroke="#FF1A88" stroke-width="18"/>
+  <path d="M600 120v390M390 315h420" stroke="#F3F4F6" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="600" cy="315" r="70" fill="#FF5CAA"/>
+  <text x="86" y="132" fill="#F3F4F6" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800">IQ Time Rift</text>
+  <text x="90" y="540" fill="#FFB8DA" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700">Repair the Web3 timeline</text>
+</svg>
